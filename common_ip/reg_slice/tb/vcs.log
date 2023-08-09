@@ -1,0 +1,19 @@
+
+Warning-[DBG_FLAG_DEP] Debug Option is being Deprecated
+  The '-fsdb' debug-related option is being deprecated and will no longer be 
+  supported in a future release.
+  Please recompile using the '-debug_access<+options>' switch and incremental 
+  options as required.  Recommended options are '-debug_access' for 
+  post-process debug, '-debug_access+classdbg' for testbench debug, and 
+  '-debug_access+all' for all debug capabilities.  Refer the VCS user guide 
+  for more granular options for debug control under the switch '-debug_access'
+  and refer to '-debug_region' for region control.
+
+*** Using c compiler gcc-4.8 instead of cc ...
+/home/liuyunqi/software/vcs_2016/bin/vcs: line 2402: dc: command not found
+
+Error-[P1ARGS-CANTOPN-F] Cannot open file
+  Unable to open 'my_design.f' due to 'No such file or directory'.
+  Please fix the reason mentioned above and continue.
+
+/home/liuyunqi/software/vcs_2016/bin/vcs: line 2402: dc: command not found
