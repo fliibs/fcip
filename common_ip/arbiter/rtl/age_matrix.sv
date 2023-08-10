@@ -9,8 +9,6 @@ module age_matrix #(
 );
 
 logic [WIDTH-1:0] vv_matrix_tmp [WIDTH-1:0];
-// logic [WIDTH-1:0] vv_set        [WIDTH-1:0];
-// logic [WIDTH-1:0] vv_unset      [WIDTH-1:0];
 
 genvar i,j;
 
