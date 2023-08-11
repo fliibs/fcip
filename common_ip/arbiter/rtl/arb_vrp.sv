@@ -1,5 +1,5 @@
 module arb_vrp #(
-    parameter MODE      = 0, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix
+    parameter MODE      = 0, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
     parameter HSK_MODE  = 1, // 0: Pass 1: 1-Cycle
     parameter WIDTH     = 4,
     parameter PRIORITY  = {WIDTH{1'b0}},
@@ -91,7 +91,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = |v_grant; // TODO
+        assign alloc_en = rdy_m&&vld_m; 
         assign v_alloc  = v_grant;
 
         age_matrix #(
@@ -113,6 +113,34 @@ generate
             .v_vld      (v_vld),
             .v_grant    (v_grant)
         );
+    end else if(MODE==3) begin 
+        logic               alloc_en;
+        logic [WIDTH-1:0]   v_alloc;
+        logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
+
+        assign alloc_en = rdy_m&&vld_m; 
+        assign v_alloc  = v_grant;
+
+        tree_plru #(
+            .WIDTH(WIDTH)
+        ) u_matrix (
+            .clk        (clk),
+            .rst_n      (rst_n),
+            .alloc_en   (alloc_en),
+            .v_alloc    (v_alloc),
+            .vv_matrix  (vv_matrix)
+        );
+
+        arb_matrix #(
+            .WIDTH(WIDTH)
+        ) u_arb (
+            .clk        (clk),
+            .rst_n      (rst_n),
+            .vv_matrix  (vv_matrix),
+            .v_vld      (v_vld),
+            .v_grant    (v_grant)
+        );
+
     end else begin 
         arb_rr #(
             .WIDTH(WIDTH)
