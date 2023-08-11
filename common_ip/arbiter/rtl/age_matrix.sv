@@ -18,7 +18,7 @@ generate
             if(i==j) begin 
                 assign vv_matrix_tmp[i][j]  = 1'b0;
             end else if(i<j) begin 
-                assign vv_matrix_tmp[i][j]  = (v_alloc[j] && alloc_en) ? 1'b0 : ((v_alloc[i] && alloc_en) ? 1'b1 : vv_matrix_tmp[i][j]);
+                assign vv_matrix_tmp[i][j]  = (v_alloc[j] && alloc_en) ? 1'b0 : ((v_alloc[i] && alloc_en) ? 1'b1 : vv_matrix[i][j]);
             end else begin 
                 assign vv_matrix_tmp[i][j]  = ~vv_matrix_tmp[j][i];
             end 

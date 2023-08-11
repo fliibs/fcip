@@ -1,1 +1,1 @@
-../rtl/vrp_fifo.sv
+$PRJ_ICDIR/demo/lint/src/common_ip/fifo/rtl/vrp_fifo.sv

@@ -1,9 +1,6 @@
 module arb_matrix #(
     parameter WIDTH=4
 )(
-    input                 clk,
-    input                 rst_n,
-
     input   [WIDTH-1:0]   vv_matrix [WIDTH-1:0],
     input   [WIDTH-1:0]   v_vld,
     

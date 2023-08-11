@@ -1,5 +1,5 @@
 module arb_vrp #(
-    parameter MODE      = 0, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
+    parameter MODE      = 3, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
     parameter HSK_MODE  = 1, // 0: Pass 1: 1-Cycle
     parameter WIDTH     = 4,
     parameter PRIORITY  = {WIDTH{1'b0}},
@@ -107,8 +107,6 @@ generate
         arb_matrix #(
             .WIDTH(WIDTH)
         ) u_arb (
-            .clk        (clk),
-            .rst_n      (rst_n),
             .vv_matrix  (vv_matrix),
             .v_vld      (v_vld),
             .v_grant    (v_grant)
@@ -134,8 +132,6 @@ generate
         arb_matrix #(
             .WIDTH(WIDTH)
         ) u_arb (
-            .clk        (clk),
-            .rst_n      (rst_n),
             .vv_matrix  (vv_matrix),
             .v_vld      (v_vld),
             .v_grant    (v_grant)

@@ -43,7 +43,7 @@ always @(posedge clk or negedge rst_n) begin
     else if(vld_s&&rdy_s) pntr_w <= pntr_w + 1'b1;
 end 
 
-always @(posedge clk or negedge rst_n) begin 
+always @(posedge clk) begin 
     if(vld_s&&rdy_s) mem_r[pntr_w] <= pld_s;
 
 end 

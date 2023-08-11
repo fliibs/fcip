@@ -17,11 +17,11 @@ generate
         for(j=0;j<2**i;j=j+1) begin: offset_
             if(i==DEPTH-1) begin
                 always @(posedge clk or negedge rst_n) 
-                    if(~rst_n)        node <= 1'b0;
+                    if(~rst_n)        node[2**i+j-1] <= 1'b0;
                     else if(alloc_en) node[2**i+j-1] <= (node[2**i+j-1]||v_alloc[2*j])&&~v_alloc[2*j+1];
             end else begin
                 always @(posedge clk or negedge rst_n) 
-                    if(~rst_n)        node <= 1'b0;    
+                    if(~rst_n)        node[2**i+j-1] <= 1'b0;    
                     else if(alloc_en) node[2**i+j-1] <= (node[2**i+j-1]||(|v_alloc[j*2**(DEPTH-i)+2**(DEPTH-i-1)-1:j*2**(DEPTH-i)]))&&~(|v_alloc[(j+1)*2**(DEPTH-i)-1:j*2**(DEPTH-i)+2**(DEPTH-i-1)]);
             end
         end 
