@@ -1,34 +1,26 @@
-// /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_fp_tb.sv
-// /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_rr_tb.sv
-<<<<<<< HEAD
-// /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_matrix_tb.sv
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_plru_tb.sv
-=======
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_matrix_tb.sv
->>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
+// ../tb/arb_fp_tb.sv
+// ../tb/arb_rr_tb.sv
+
+// ../tb/arb_matrix_tb.sv
+../tb/arb_plru_tb.sv
 
 
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_fp.sv
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_rr.sv
+../rtl/arb_fp.sv
+../rtl/arb_rr.sv
 
 // age_matrix grant
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/age_matrix.sv
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_matrix.sv 
+../rtl/age_matrix.sv
+../rtl/arb_matrix.sv 
 
 // age matrix vrp 
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/real_mux_onehot.sv
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_vrp_matrix.sv 
+../rtl/real_mux_onehot.sv
+../rtl/arb_vrp_matrix.sv 
 
-<<<<<<< HEAD
 // tree plru
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/tree_plru.sv
+../rtl/tree_plru.sv
 
 // mode select 
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_vrp.sv
+../rtl/arb_vrp.sv
 
-// /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/plru_mapping.sv
-// /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/plru_update.sv
-=======
-// mode select 
-/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_vrp.sv
->>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
+// ../rtl/plru_mapping.sv
+// ../rtl/plru_update.sv
