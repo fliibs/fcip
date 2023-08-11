@@ -1,3 +1,10 @@
+// ../tb/arb_fp_tb.sv
+// ../tb/arb_rr_tb.sv
+
+// ../tb/arb_matrix_tb.sv
+../tb/arb_plru_tb.sv
+
+
 ../rtl/arb_fp.sv
 ../rtl/arb_rr.sv
 
