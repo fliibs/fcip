@@ -1,5 +1,9 @@
 module arb_vrp #(
+<<<<<<< HEAD
     parameter MODE      = 0, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
+=======
+    parameter MODE      = 0, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix
+>>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
     parameter HSK_MODE  = 1, // 0: Pass 1: 1-Cycle
     parameter WIDTH     = 4,
     parameter PRIORITY  = {WIDTH{1'b0}},
@@ -91,7 +95,11 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
+<<<<<<< HEAD
         assign alloc_en = rdy_m&&vld_m; 
+=======
+        assign alloc_en = |v_grant; // TODO
+>>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
         assign v_alloc  = v_grant;
 
         age_matrix #(
@@ -113,6 +121,7 @@ generate
             .v_vld      (v_vld),
             .v_grant    (v_grant)
         );
+<<<<<<< HEAD
     end else if(MODE==3) begin 
         logic               alloc_en;
         logic [WIDTH-1:0]   v_alloc;
@@ -141,6 +150,8 @@ generate
             .v_grant    (v_grant)
         );
 
+=======
+>>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
     end else begin 
         arb_rr #(
             .WIDTH(WIDTH)

@@ -1,7 +1,11 @@
 // /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_fp_tb.sv
 // /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_rr_tb.sv
+<<<<<<< HEAD
 // /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_matrix_tb.sv
 /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_plru_tb.sv
+=======
+/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/tb/arb_matrix_tb.sv
+>>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
 
 
 /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_fp.sv
@@ -15,6 +19,7 @@
 /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/real_mux_onehot.sv
 /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_vrp_matrix.sv 
 
+<<<<<<< HEAD
 // tree plru
 /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/tree_plru.sv
 
@@ -23,3 +28,7 @@
 
 // /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/plru_mapping.sv
 // /home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/plru_update.sv
+=======
+// mode select 
+/home/liuyunqi/huangtao/common_ip/CommonIP/arbiter/rtl/arb_vrp.sv
+>>>>>>> 76efd7d7ff571512e150f34d1dd5087e18fd25fc
