@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="uS6J3l4YceRd7HR9iCpc" name="axi_sramc">
-        <mxGraphModel dx="908" dy="375" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="1080" dy="631" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -658,9 +658,9 @@
                         <mxPoint x="347.15999999999985" y="1313" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="FCKCPDKtxMyE0Qr6OGYT-74" style="edgeStyle=none;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;elbow=vertical;strokeWidth=2;strokeColor=#ff1605;entryX=0.123;entryY=0.733;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" target="FCKCPDKtxMyE0Qr6OGYT-57" edge="1">
+                <mxCell id="FCKCPDKtxMyE0Qr6OGYT-74" style="edgeStyle=none;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;elbow=vertical;strokeWidth=2;strokeColor=#ff1605;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="192.35" y="1333" as="targetPoint"/>
+                        <mxPoint x="192" y="1351" as="targetPoint"/>
                         <mxPoint x="192.35" y="1282" as="sourcePoint"/>
                         <Array as="points">
                             <mxPoint x="192" y="1344"/>
