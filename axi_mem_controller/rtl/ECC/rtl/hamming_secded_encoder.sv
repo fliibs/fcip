@@ -1,4 +1,4 @@
-module hamming_secded_encoder#(
+ module hamming_secded_encoder#(
     parameter      INFO_WIDTH    =   256,
 
     //do NOT change below parameter, or use localparam at new version tools
