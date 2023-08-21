@@ -71,9 +71,9 @@ module transfer_split #(
         // sram data width aligned
         if (AXI_DATA_WIDTH == 64) begin
             nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};
-        end else (AXI_DATA_WIDTH == 128) begin
+        end else if (AXI_DATA_WIDTH == 128) begin
             nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:4], 4'h0};
-        end else (AXI_DATA_WIDTH == 256) begin
+        end else if (AXI_DATA_WIDTH == 256) begin
             nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:5], 5'h0};
         end else begin
             nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};

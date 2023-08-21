@@ -194,9 +194,9 @@ module write_handler #(
     // rmw dec
     rw_decoder #(
         .AXI_ID_WIDTH   ( AXI_ID_WIDTH   ),
-        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ),
+        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH )
     ) u_rmw_rw_dec(
-        .sel             ( s_rsp_rw       )          
+        .sel             ( s_rsp_rw       ),          
         .s_dec_vld       ( s_rsp_vld      ),
         .s_dec_rdy       ( s_rsp_rdy      ),
         .s_dec_rw        ( s_rsp_rw       ),
@@ -217,7 +217,7 @@ module write_handler #(
         .m_dec_1_rmw     ( m_rsp_1_rmw    ),
         .m_dec_1_axlast  ( m_rsp_1_axlast ),
         .m_dec_1_axid    ( m_rsp_1_axid   ),
-        .m_dec_1_data    ( m_rsp_1_data   ),
+        .m_dec_1_data    ( m_rsp_1_data   )
     );
 
     // brsp gen

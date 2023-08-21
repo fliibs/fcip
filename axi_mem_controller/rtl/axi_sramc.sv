@@ -8,8 +8,8 @@ module axi_sramc
     parameter  HAS_NARROW_TR     = 1,
     parameter  HAS_UNALIGNED_TR  = 1,
     // The data bit width of SRAM needs to meet the ecc requirements 
-    localparam ECC_CHECK__WIDTH  = ($clog2($clog2(INFO_WIDTH) + INFO_WIDTH) == $clog2(INFO_WIDTH)) ? $clog2(INFO_WIDTH) :  $clog2(INFO_WIDTH)+1,
-    localparam SRAM_DATA_WIDTH   = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1,
+    localparam ECC_CHECK__WIDTH  = ($clog2($clog2(AXI_DATA_WIDTH) + AXI_DATA_WIDTH) == $clog2(AXI_DATA_WIDTH)) ? $clog2(AXI_DATA_WIDTH) :  $clog2(AXI_DATA_WIDTH)+1,
+    localparam SRAM_DATA_WIDTH   = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1
 ) (
     // clk&rstn
     input logic                               clk,
@@ -264,9 +264,9 @@ module axi_sramc
     // rw rsp dec
     rw_decoder #(
         .AXI_ID_WIDTH   ( AXI_ID_WIDTH   ),
-        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ),
+        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH )
     ) u_rw_rsp_dec(
-        .sel             ( rsp_b4_dec_rmw | rsp_b4_dec_rw )          
+        .sel             ( rsp_b4_dec_rmw | rsp_b4_dec_rw ),          
         .s_dec_vld       ( rsp_b4_dec_vld                 ),
         .s_dec_rdy       ( rsp_b4_dec_rdy                 ),
         .s_dec_rw        ( rsp_b4_dec_rw                  ),
@@ -287,7 +287,7 @@ module axi_sramc
         .m_dec_1_rmw     ( w_rsp_rmw                      ),
         .m_dec_1_axlast  ( w_rsp_axlast                   ),
         .m_dec_1_axid    ( w_rsp_axid                     ),
-        .m_dec_1_data    ( w_rsp_data                     ),
+        .m_dec_1_data    ( w_rsp_data                     )
     );
 
     // ecc encoder
@@ -319,11 +319,11 @@ module axi_sramc
     );
 
     // ecc decoder
-     ecc_encoder #(
+     ecc_decoder #(
         .AXI_ID_WIDTH   ( AXI_ID_WIDTH    ),
         .AXI_DATA_WIDTH ( AXI_DATA_WIDTH  ),
         .ECC_DATA_WIDTH ( SRAM_DATA_WIDTH )
-    ) u_ecc_encoder(
+     ) u_ecc_decoder(
         .s_ecc_vld    ( m_mo_valid        ),  
         .s_ecc_rdy    ( m_mo_ready        ),  
         .s_ecc_rw     ( m_mo_rw           ),  

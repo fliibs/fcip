@@ -42,8 +42,6 @@ module ecc_decoder #(
     assign m_ecc_rmw     = s_ecc_rmw;
     assign m_ecc_axlast  = s_ecc_axlast;
     assign m_ecc_axid    = s_ecc_axid;
-    assign m_ecc_axuser  = s_ecc_axuser;
-    assign m_ecc_axaddr  = s_ecc_axaddr;
 
     
 endmodule
