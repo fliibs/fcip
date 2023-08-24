@@ -75,7 +75,7 @@ module axi_sramc
     input  logic                              m_mo_rmw,
     input  logic                              m_mo_axlast,
     input  logic [AXI_ID_WIDTH-1:0]           m_mo_axid,
-    input  logic [AXI_DATA_WIDTH-1:0]         m_mo_data,
+    input  logic [SRAM_DATA_WIDTH-1:0]        m_mo_data,
     // Reg
     output logic                              axi_sramc_idle,
     output logic                              ecc_err
@@ -252,7 +252,7 @@ module axi_sramc
         .PLD_WIDTH  ( ARB_REQ_WIDTH )
     ) u_rw_req_arb(
         .clk     ( clk              ),
-        .rst_n   ( rst_n            ),  
+        .rst_n   ( rstn            ),  
         .v_vld_s ( v_arb_req_vld    ), 
         .v_rdy_s ( v_arb_req_rdy    ), 
         .v_pld_s ( v_arb_req_pld    ), 

@@ -38,17 +38,18 @@ generate
         logic                   vld_m_r;
         logic [PLD_WIDTH-1:0]   pld_m_r;
 
-        assign vld_m   = vld_m_r;
-        assign pld_m   = pld_m_r;
+        assign vld_m   = vld_m_r || m_vld;
+        assign pld_m   = pld_m_r ? pld_m_r : m_pld;
 
         always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n) vld_m_r  <= 1'b0;
-            else       vld_m_r  <= m_vld;
+            if(~rst_n)                vld_m_r  <= 1'b0;
+            else if (vld_m && ~rdy_m) vld_m_r  <= m_vld;
+            else if (vld_m && rdy_m)  vld_m_r  <= 1'b0;
         end 
 
         always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n) pld_m_r  <= 1'b0;
-            else       pld_m_r  <= m_pld;
+            if(~rst_n)                pld_m_r  <= 1'b0;
+            else if (vld_m && ~rdy_m) pld_m_r  <= m_pld;
         end 
     
     end else begin 

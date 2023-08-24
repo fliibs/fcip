@@ -23,6 +23,8 @@ module single_port_sram #(
     always @(posedge clk) begin
         if (ce && ~we) begin
             dout <= mem[addr];
+        end else begin
+            dout <= {DW{1'b0}};
         end
     end
     

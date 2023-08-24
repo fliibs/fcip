@@ -24,6 +24,89 @@ module transfer_split #(
     output logic [AXI_USER_WIDTH-1:0]         m_user,
     output logic [AXI_ADDR_WIDTH-1:0]         m_addr
 );
+    
+    logic [8:0] burst_len;
+    logic [7:0] burst_cnt;
+
+    logic [AXI_ADDR_WIDTH-1:0]         s_addr_q;
+    logic [AXI_ID_WIDTH-1:0]           s_id_q;
+    logic [7:0]                        s_len_q;
+    logic [2:0]                        s_size_q;
+    logic [1:0]                        s_burst_q;
+    logic [AXI_USER_WIDTH-1:0]         s_user_q;
+
+    logic [AXI_ADDR_WIDTH-1:0] addr_reg;
+
+    logic [AXI_ADDR_WIDTH-1:0] m_addr_temp;
+    logic [AXI_ADDR_WIDTH-1:0] m_addr_aligned;
+    
+
+    assign burst_len = s_len + 1'b1;
+
+    assign s_rdy = (burst_cnt == 8'h0);
+
+    always_ff @(posedge clk or negedge rstn) begin
+        if (~rstn) begin
+            burst_cnt <= 8'h0;
+        end else if (s_vld && s_rdy && m_vld && m_rdy) begin
+            burst_cnt <= s_len;
+        end else if (m_vld && m_rdy) begin
+            burst_cnt <= burst_cnt - 1'b1;
+        end else if (s_vld && s_rdy) begin
+            burst_cnt <= burst_len[7:0];
+        end
+    end
+    
+    always_ff @(posedge clk or negedge rstn) begin
+        if (~rstn) begin
+            s_addr_q  <= {AXI_ADDR_WIDTH{1'b0}};
+            s_id_q    <= {AXI_ID_WIDTH{1'b0}};
+            s_len_q   <= 8'h0;
+            s_size_q  <= 3'h0;
+            s_burst_q <= 2'h0;
+            s_user_q  <= {AXI_USER_WIDTH{1'b0}};
+        end else if (s_vld && s_rdy) begin
+            s_addr_q  <= s_addr;
+            s_id_q    <= s_id;
+            s_len_q   <= burst_len;
+            s_size_q  <= s_size;
+            s_burst_q <= s_burst;
+            s_user_q  <= s_user;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rstn) begin
+        if (~rstn) begin
+            addr_reg <= {AXI_ADDR_WIDTH{1'b0}};
+        end else if (s_vld && s_rdy) begin
+            addr_reg <= nxt_addr_calc(s_addr, burst_len, s_size, s_burst);
+        end else if (m_vld && m_rdy) begin
+            addr_reg <= nxt_addr_calc(addr_reg, s_len_q, s_size_q, s_burst_q);
+        end
+    end
+    
+    assign m_addr_temp = s_vld ? s_addr : addr_reg;
+
+    // first transfer addr aligned
+    always_comb begin
+        if (AXI_DATA_WIDTH == 64) begin
+            m_addr_aligned = {m_addr_temp[AXI_ADDR_WIDTH-1:3], 3'h0};
+        end else if (AXI_DATA_WIDTH == 128) begin
+            m_addr_aligned = {m_addr_temp[AXI_ADDR_WIDTH-1:4], 4'h0};
+        end else if (AXI_DATA_WIDTH == 256) begin
+            m_addr_aligned = {m_addr_temp[AXI_ADDR_WIDTH-1:5], 5'h0};
+        end else begin
+            m_addr_aligned = {m_addr_temp[AXI_ADDR_WIDTH-1:3], 3'h0};
+        end
+    end
+
+    assign m_vld  = s_vld || (|burst_cnt);
+    assign m_last = (s_vld && burst_len == 9'h1) || (burst_cnt == 8'b1);
+    assign m_id   = s_vld ? s_id : s_id_q;
+    assign m_user = s_vld ? s_user : s_user_q;
+    assign m_addr = m_addr_aligned;
+
+
     // next address calculate function
     function automatic logic [AXI_ADDR_WIDTH-1:0] nxt_addr_calc(input logic [AXI_ADDR_WIDTH-1:0] addr, logic [7:0] len, input logic [2:0] size, input logic [1:0] burst);
         logic [AXI_ADDR_WIDTH-1:0] aligned_addr;
@@ -42,8 +125,10 @@ module transfer_split #(
                 wrap_shift = size + 3'd2;
             end else if (len == 8'd8) begin
                 wrap_shift = size + 3'd3;
-            end else begin
+            end else if (len == 8'd16) begin
                 wrap_shift = size + 3'd4;
+            end else begin
+                wrap_shift = size + 3'd1;
             end 
         end else begin
             wrap_shift = 4'b0;
@@ -68,80 +153,18 @@ module transfer_split #(
             axi_addr_calc = addr;
         end
 
+        return(axi_addr_calc);
+
         // sram data width aligned
-        if (AXI_DATA_WIDTH == 64) begin
-            nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};
-        end else if (AXI_DATA_WIDTH == 128) begin
-            nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:4], 4'h0};
-        end else if (AXI_DATA_WIDTH == 256) begin
-            nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:5], 5'h0};
-        end else begin
-            nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};
-        end
+        // if (AXI_DATA_WIDTH == 64) begin
+            // nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};
+        // end else if (AXI_DATA_WIDTH == 128) begin
+            // nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:4], 4'h0};
+        // end else if (AXI_DATA_WIDTH == 256) begin
+            // nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:5], 5'h0};
+        // end else begin
+            // nxt_addr_calc = {axi_addr_calc[AXI_ADDR_WIDTH-1:3], 3'h0};
+        // end
     endfunction
-
-
-
-
-    logic [8:0] burst_len;
-    logic [7:0] burst_cnt;
-
-    logic [AXI_ADDR_WIDTH-1:0]         s_addr_q;
-    logic [AXI_ID_WIDTH-1:0]           s_id_q;
-    logic [7:0]                        s_len_q;
-    logic [2:0]                        s_size_q;
-    logic [1:0]                        s_burst_q;
-    logic [AXI_USER_WIDTH-1:0]         s_user_q;
-
-    logic [AXI_ADDR_WIDTH-1:0] addr_reg;
-
-    assign burst_len = s_len + 1'b1;
-
-    assign s_rdy = (burst_cnt == 8'h0);
-
-    always_ff @(posedge clk or negedge rstn) begin
-        if (~rstn) begin
-            burst_cnt <= 8'h0;
-        end else if (m_vld && m_rdy) begin
-            burst_cnt <= burst_cnt - 1'b1;
-        end else if (s_vld && s_rdy) begin
-            burst_cnt <= burst_len;
-        end
-    end
-    
-    always_ff @(posedge clk or negedge rstn) begin
-        if (~rstn) begin
-            s_addr_q  <= {AXI_ADDR_WIDTH{1'b0}};
-            s_id_q    <= {AXI_ID_WIDTH{1'b0}};
-            s_len_q   <= 8'h0;
-            s_size_q  <= 3'h0;
-            s_burst_q <= 2'h0;
-            s_user_q  <= {AXI_USER_WIDTH{1'b0}};
-        end else if (s_vld && s_rdy) begin
-            s_addr_q  <= s_addr;
-            s_id_q    <= s_id;
-            s_len_q   <= s_len;
-            s_size_q  <= s_size;
-            s_burst_q <= s_burst;
-            s_user_q  <= s_user;
-        end
-    end
-
-    always_ff @(posedge clk or negedge rstn) begin
-        if (~rstn) begin
-            addr_reg <= {AXI_ADDR_WIDTH{1'b0}};
-        end else if (m_vld && m_rdy) begin
-            addr_reg <= nxt_addr_calc(addr_reg, s_len_q, s_size_q, s_burst_q);
-        end else if (s_vld && s_rdy) begin
-            addr_reg <= nxt_addr_calc(s_addr, burst_len, s_size, s_burst);
-        end
-    end
-    
-    assign m_vld   = |burst_cnt;
-    assign m_last = (burst_cnt == 8'b1);
-    assign m_id   = s_id_q;
-    assign m_user = s_user_q;
-    assign m_addr = (s_vld && s_rdy) ? s_addr : addr_reg;
-
 
 endmodule

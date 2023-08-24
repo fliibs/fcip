@@ -2,17 +2,17 @@
 
 module axi_sramc_dv_top;
      
-    parameter  AXI_ADDR_WIDTH    = 32;
-    parameter  AXI_ID_WIDTH      = 6;
-    parameter  AXI_DATA_WIDTH    = 64;
-    parameter  AXI_WSTRB_WIDTH   = AXI_DATA_WIDTH/8;
-    parameter  AXI_USER_WIDTH    = 8;
-    parameter  HAS_NARROW_TR     = 1;
-    parameter  HAS_UNALIGNED_TR  = 1;
+    parameter  AXI_ADDR_WIDTH      = 32;
+    parameter  AXI_ID_WIDTH        = 6;
+    parameter  AXI_DATA_WIDTH      = 64;
+    parameter  AXI_WSTRB_WIDTH     = AXI_DATA_WIDTH/8;
+    parameter  AXI_USER_WIDTH      = 8;
+    parameter  HAS_NARROW_TR       = 1;
+    parameter  HAS_UNALIGNED_TR    = 1;
     // The data bit width of SRAM needs to meet the ecc requirements 
-    localparam ECC_CHECK__WIDTH  = ($clog2($clog2(AXI_DATA_WIDTH) + AXI_DATA_WIDTH) == $clog2(AXI_DATA_WIDTH)) ? $clog2(AXI_DATA_WIDTH) :  $clog2(AXI_DATA_WIDTH)+1;
-    localparam SRAM_DATA_WIDTH   = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1;
-    localparam SIDEBAND_WIDTH = AXI_ID_WIDTH+AXI_USER_WIDTH +1+1+1; // rw+rmw+id+last+user
+    localparam ECC_CHECK__WIDTH    = ($clog2($clog2(AXI_DATA_WIDTH) + AXI_DATA_WIDTH) == $clog2(AXI_DATA_WIDTH)) ? $clog2(AXI_DATA_WIDTH) :  $clog2(AXI_DATA_WIDTH)+1;
+    localparam SRAM_DATA_WIDTH     = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1;
+    localparam SRAM_CTRL_WIDTH     = AXI_ID_WIDTH+1+1+1; // rw+rmw+id+last
 
     // clk&rstn
     logic                               clk;
@@ -82,7 +82,9 @@ module axi_sramc_dv_top;
     logic                              m_mo_rmw;
     logic                              m_mo_axlast;
     logic [AXI_ID_WIDTH-1:0]           m_mo_axid;
-    logic [AXI_DATA_WIDTH-1:0]         m_mo_data;
+    logic [SRAM_DATA_WIDTH-1:0]        m_mo_data;
+
+    event   w_event;
     
     // axi sramc
     axi_sramc #(
@@ -155,12 +157,12 @@ module axi_sramc_dv_top;
 
     // memory wrapper
     memory_wrapper #(
-        .ADDR_WIDTH      ( AXI_ADDR_WIDTH                                    ),
-        .DATA_WIDTH      ( SRAM_DATA_WIDTH                                   ),
-        .SIDEBAND_WIDTH  ( SIDEBAND_WIDTH                                    ), // rw+rmw+id+last+user
-        .PLD_I_WIDTH     ( SIDEBAND_WIDTH + AXI_ADDR_WIDTH + SRAM_DATA_WIDTH ),
-        .PLD_O_WIDTH     ( SRAM_DATA_WIDTH + SIDEBAND_WIDTH                  ),
-        .SRAM_R_LATENCY  ( 1                                                 )
+        .ADDR_WIDTH      ( AXI_ADDR_WIDTH                                                      ),
+        .DATA_WIDTH      ( SRAM_DATA_WIDTH                                                     ),
+        .CTRL_WIDTH      ( SRAM_CTRL_WIDTH                                                     ), // rw+rmw+id+last
+        .PLD_I_WIDTH     ( SRAM_CTRL_WIDTH + AXI_USER_WIDTH + AXI_ADDR_WIDTH + SRAM_DATA_WIDTH ),
+        .PLD_O_WIDTH     ( SRAM_CTRL_WIDTH + SRAM_DATA_WIDTH                                   ),
+        .SRAM_R_LATENCY  ( 1                                                                   )
     ) u_memory_wrapper(
         .clk    ( clk        ), 
         .rstn   ( rstn       ), 
@@ -175,7 +177,7 @@ module axi_sramc_dv_top;
     // sim
     initial begin
         clk=0;
-        forever #5 clk=~clk;
+        forever #1 clk=~clk;
     end
     
     initial begin
@@ -187,8 +189,167 @@ module axi_sramc_dv_top;
     end
 
     initial begin
+        s_awvalid <= 1'b0;
+        s_awaddr  <= {AXI_ADDR_WIDTH{1'b0}};
+        s_awid    <= {AXI_ID_WIDTH{1'b0}};
+        s_awlen   <= 8'h0;
+        s_awsize  <= 3'h0;
+        s_awburst <= 2'h0;
+        s_awcache <= 4'h0;
+        s_awprot  <= 3'h0;
+        s_awqos   <= 4'h0;
+        s_awuser  <= {AXI_USER_WIDTH{1'b0}};
+
+        s_wvalid  <= 1'b0; 
+        s_wdata   <= {AXI_DATA_WIDTH{1'b0}};
+        s_wstrb   <= {AXI_WSTRB_WIDTH{1'b0}};
+        s_wlast   <= 1'b0;
+
+        s_bready  <= 1'b1;
+        
+        s_arvalid <= 1'b0;
+        s_araddr  <= {AXI_ADDR_WIDTH{1'b0}};
+        s_arid    <= {AXI_ID_WIDTH{1'b0}};
+        s_arlen   <= 8'h0;
+        s_arsize  <= 3'h0;
+        s_arburst <= 2'h0;
+        s_arcache <= 4'h0;
+        s_arprot  <= 3'h0;
+        s_arqos   <= 4'h0;
+        s_aruser  <= {AXI_USER_WIDTH{1'b0}};
+
+        s_rready  <= 1'b1;
+        #100;
+
+        // read tr
+        repeat(2) @(posedge clk);
+        s_awvalid <= #0.01 1'b1;
+        s_awaddr  <= 32'h8;
+        s_awid    <= 'h1;
+        s_awlen   <= 8'h3;
+        s_awsize  <= 3'b011; // 8B
+        s_awburst <= 2'h2;
+        s_awcache <= 4'h0;
+        s_awprot  <= 3'h0;
+        s_awqos   <= 4'h0;
+        s_awuser  <= 'h8;
+        
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'h1111_1111_1111_1111;
+        s_wstrb   <= 8'hff;
+        s_wlast   <= 1'b0;
+        
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'h2222_2222_2222_2222;
+        s_wstrb   <= 8'hff;
+        s_wlast   <= 1'b0;
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'h3333_3333_3333_3333;
+        s_wstrb   <= 8'hff;
+        s_wlast   <= 1'b0;
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'h4444_4444_4444_4444;
+        s_wstrb   <= 8'hff;
+        s_wlast   <= 1'b1;
+        @ w_event;
+        s_wvalid  <= 1'b0;
+         
+        // read
+        #50;
+        repeat(2) @(posedge clk);
+
+        s_arvalid <= #0.01 1'b1;
+        s_araddr  <= 32'h8;
+        s_arid    <= 'h3;
+        s_arlen   <= 8'h3;
+        s_arsize  <= 3'b011; // 8B
+        s_arburst <= 2'h2;
+        s_arcache <= 4'h0;
+        s_arprot  <= 3'h0;
+        s_arqos   <= 4'h0;
+        s_aruser  <= 'h4;
+
+        // rmw 
+        #50;
+        repeat(2) @(posedge clk);
+        s_awvalid <= #0.01 1'b1;
+        s_awaddr  <= 32'h8;
+        s_awid    <= 'h5;
+        s_awlen   <= 8'h3;
+        s_awsize  <= 3'b010; // 4B
+        s_awburst <= 2'h1; //incr
+        s_awcache <= 4'h0;
+        s_awprot  <= 3'h0;
+        s_awqos   <= 4'h0;
+        s_awuser  <= 'h9;
+        
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'hffff_ffff_ffff_ffff;
+        s_wstrb   <= 8'h0f;
+        s_wlast   <= 1'b0;
+
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'heeee_eeee_eeee_eeee;
+        s_wstrb   <= 8'hf0;
+        s_wlast   <= 1'b0;
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'haaaa_aaaa_aaaa_aaaa;
+        s_wstrb   <= 8'h0f;
+        s_wlast   <= 1'b0;
+        @ w_event;
+        repeat(1) @(posedge clk);
+        s_wvalid  <= 1'b1; 
+        s_wdata   <= 64'hbbbb_bbbb_bbbb_bbbb;
+        s_wstrb   <= 8'hf0;
+        s_wlast   <= 1'b1;
+        @ w_event;
+        s_wvalid  <= 1'b0;
+        
+        // read
+         #50;
+        repeat(2) @(posedge clk);
+        s_arvalid <= #0.01 1'b1;
+        s_araddr  <= 32'h8;
+        s_arid    <= 'h4;
+        s_arlen   <= 8'h3;
+        s_arsize  <= 3'b011; // 8B
+        s_arburst <= 2'h1;//incr
+        s_arcache <= 4'h0;
+        s_arprot  <= 3'h0;
+        s_arqos   <= 4'h0;
+        s_aruser  <= 'h6;
+
         #100;
         $finish();
+    end
+
+    always @(posedge clk or negedge rstn) begin
+        if (s_arvalid && s_arready) begin
+            s_arvalid <= 1'b0;
+        end
+    end
+
+    always @(posedge clk or negedge rstn) begin
+        if (s_awvalid && s_awready) begin
+            s_awvalid <= 1'b0;
+        end
+    end
+
+    always @(posedge clk or negedge rstn) begin
+        if (s_wvalid && s_wready) begin
+            s_wvalid <= 1'b0;
+            -> w_event;
+        end
     end
 
     initial begin 

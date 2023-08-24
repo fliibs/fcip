@@ -55,7 +55,8 @@ module write_handler #(
 );
 
 
-    localparam AX_PLD_WIDTH = AXI_ADDR_WIDTH + AXI_ID_WIDTH + 8 + 3 + 2 + AXI_USER_WIDTH; //addr+id+len+size+busrt+user
+    localparam AX_PLD_WIDTH   = AXI_ADDR_WIDTH + AXI_ID_WIDTH + 8 + 3 + 2 + AXI_USER_WIDTH; //addr+id+len+size+busrt+user
+    localparam ARB_REQ_WIDTH  = 1 + 1 + 1 + AXI_ID_WIDTH + AXI_USER_WIDTH + AXI_ADDR_WIDTH + AXI_DATA_WIDTH; //rw+rmw+last+id+user+addr+data
 
     logic [AX_PLD_WIDTH-1:0]    s_aw_pld;
     logic [AX_PLD_WIDTH-1:0]    m_aw_fifo_pld;
@@ -99,11 +100,24 @@ module write_handler #(
     logic [AXI_ID_WIDTH-1:0]    m_rsp_1_axid;
     logic [AXI_DATA_WIDTH-1:0]  m_rsp_1_data;
 
+    logic                       rs_req_vld;
+    logic                       rs_req_rdy;
+    logic                       rs_req_rw;
+    logic                       rs_req_rmw;
+    logic                       rs_req_axlast;
+    logic [AXI_ID_WIDTH-1:0]    rs_req_axid;
+    logic [AXI_USER_WIDTH-1:0]  rs_req_axuser;
+    logic [AXI_ADDR_WIDTH-1:0]  rs_req_axaddr;
+    logic [AXI_DATA_WIDTH-1:0]  rs_req_data;
+
+    logic [ARB_REQ_WIDTH-1:0]   rs_req_pld; 
+    logic [ARB_REQ_WIDTH-1:0]   m_req_pld; 
+
 
     logic [3:0] tr_cnt;
 
     assign s_aw_pld = {s_awaddr, s_awid, s_awlen, s_awsize, s_awburst, s_awuser};
-    assign {m_aw_fifo_araddr, m_aw_fifo_arid, m_aw_fifo_arlen, m_aw_fifo_arsize, m_aw_fifo_arburst, m_aw_fifo_aruser} = m_aw_fifo_pld;
+    assign {m_aw_fifo_awaddr, m_aw_fifo_awid, m_aw_fifo_awlen, m_aw_fifo_awsize, m_aw_fifo_awburst, m_aw_fifo_awuser} = m_aw_fifo_pld;
     
     // aw fifo
     vrp_fifo #(
@@ -151,7 +165,7 @@ module write_handler #(
     assign s_wrdy           = aww_merge_vld && aww_merge_rdy;
     assign aww_merge_awaddr = m_split_awaddr;
     assign aww_merge_awid   = m_split_awid;
-    assign aww_merge_awuser = aww_merge_awuser;
+    assign aww_merge_awuser = m_split_awuser;
     assign aww_merge_awlast = s_wlast;
     assign aww_merge_wdata  = s_wdata;
     assign aww_merge_wstrb  = s_wstrb;
@@ -190,6 +204,23 @@ module write_handler #(
         .s_rsp_axid   ( m_rsp_0_axid     ), 
         .s_rsp_data   ( m_rsp_0_data     )
     );
+
+    // assign rs_req_pld = {rs_req_rw,rs_req_rmw,rs_req_axlast,rs_req_axid,rs_req_axuser,rs_req_axaddr,rs_req_data};
+    // assign {m_req_rw,m_req_rmw,m_req_axlast,m_req_axid,m_req_axuser,m_req_axaddr,m_req_data} = m_req_pld;
+// 
+    // reg_slice #(
+        // .RS_TYPE   ( 2             ), // 0: Pass Through 1: Forward 2: Backward 3:Full
+        // .PLD_WIDTH ( ARB_REQ_WIDTH )
+    // ) u_reg_slice(
+        // .clk    ( clk        ),
+        // .rst_n  ( rstn       ),
+        // .s_vld  ( rs_req_vld ),
+        // .s_rdy  ( rs_req_rdy ),
+        // .s_pld  ( rs_req_pld ),
+        // .m_vld  ( m_req_vld  ),
+        // .m_rdy  ( m_req_rdy  ),
+        // .m_pld  ( m_req_pld  )
+    // );
 
     // rmw dec
     rw_decoder #(
@@ -238,6 +269,6 @@ module write_handler #(
         end
     end
     
-    assign read_handler_idle = ~|tr_cnt;
+    assign write_handler_idle = ~|tr_cnt;
 
 endmodule

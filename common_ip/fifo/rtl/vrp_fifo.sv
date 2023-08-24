@@ -44,7 +44,7 @@ always @(posedge clk or negedge rst_n) begin
 end 
 
 always @(posedge clk) begin 
-    if(vld_s&&rdy_s) mem_r[pntr_w] <= pld_s;
+    if(vld_s&&rdy_s) mem_r[pntr_w[PNTR_WDITH-1:0]] <= pld_s;
 
 end 
 

@@ -1,11 +1,12 @@
 module memory_wrapper #(
-    parameter  ADDR_WIDTH     = 32,
-    parameter  DATA_WIDTH     = 64,
-    parameter  SIDEBAND_WIDTH = 64,
-    parameter  PLD_I_WIDTH    = DATA_WIDTH + ADDR_WIDTH + SIDEBAND_WIDTH,
-    parameter  PLD_O_WIDTH    = DATA_WIDTH + SIDEBAND_WIDTH,
-    parameter  SRAM_R_LATENCY = 1,
-    localparam CNT_WIDTH      = (SRAM_R_LATENCY==1) ? 2 : $clog2(SRAM_R_LATENCY)+1
+    parameter  ADDR_WIDTH      = 32,
+    parameter  DATA_WIDTH      = 64,
+    parameter  AXI_USER_WIDTH  = 8,
+    parameter  CTRL_WIDTH      = 64,
+    parameter  PLD_I_WIDTH     = CTRL_WIDTH + AXI_USER_WIDTH + ADDR_WIDTH + DATA_WIDTH,
+    parameter  PLD_O_WIDTH     = CTRL_WIDTH + DATA_WIDTH,
+    parameter  SRAM_R_LATENCY  = 1,
+    localparam CNT_WIDTH       = (SRAM_R_LATENCY==1) ? 2 : $clog2(SRAM_R_LATENCY)+1
 ) (
     input   logic                     clk,
     input   logic                     rstn,
@@ -18,7 +19,8 @@ module memory_wrapper #(
 );
     
 
-    logic  [SIDEBAND_WIDTH-1:0] sideband;
+    logic  [CTRL_WIDTH-1:0] ctrl;
+    logic  [AXI_USER_WIDTH-1:0] user;
     logic  [ADDR_WIDTH-1:0] addr;
     logic  [DATA_WIDTH-1:0] idata;
     logic  [DATA_WIDTH-1:0] odata;
@@ -26,7 +28,7 @@ module memory_wrapper #(
     logic  ce;
     logic  we;
 
-    logic  [SIDEBAND_WIDTH-1:0] sideband_reg;
+    logic  [CTRL_WIDTH-1:0] ctrl_reg;
 
     logic                   fifo_vld;
     logic                   fifo_rdy;
@@ -36,10 +38,11 @@ module memory_wrapper #(
 
     assign idata    = s_pld[DATA_WIDTH-1:0];
     assign addr     = s_pld[DATA_WIDTH+ADDR_WIDTH-1:DATA_WIDTH];
-    assign sideband = s_pld[PLD_I_WIDTH-1:DATA_WIDTH+ADDR_WIDTH];
+    assign user     = s_pld[DATA_WIDTH+ADDR_WIDTH+AXI_USER_WIDTH-1:DATA_WIDTH+ADDR_WIDTH];
+    assign ctrl     = s_pld[PLD_I_WIDTH-1:DATA_WIDTH+ADDR_WIDTH+AXI_USER_WIDTH];
 
     assign ce = s_vld && s_rdy;
-    assign we = s_pld[PLD_I_WIDTH];
+    assign we = s_pld[PLD_I_WIDTH-1];
 
 
     single_port_sram #( 
@@ -56,9 +59,9 @@ module memory_wrapper #(
 
     always @(posedge clk or negedge rstn) begin
         if (~rstn) begin
-            sideband_reg <= SIDEBAND_WIDTH;
+            ctrl_reg <= {CTRL_WIDTH{1'b0}};
         end else if (ce) begin
-            sideband_reg <= sideband;
+            ctrl_reg <= ctrl;
         end
     end
 
@@ -69,15 +72,17 @@ module memory_wrapper #(
             fifo_vld <= 1'b0;
         end else if (ce) begin
             fifo_vld <= 1'b1;
+        end else begin
+            fifo_vld <= 1'b0;
         end
     end
 
-    assign fifo_pld = {sideband_reg,odata};
+    assign fifo_pld = {ctrl_reg,odata};
 
     vrp_fifo #(
-        .PLD_WIDTH ( DATA_WIDTH +  SIDEBAND_WIDTH),
+        .PLD_WIDTH ( DATA_WIDTH +  CTRL_WIDTH),
         .DEPTH     ( SRAM_R_LATENCY+1 )
-    ) u_ar_fifo (
+    ) u_sram_fifo (
         .clk   ( clk      ),
         .rst_n ( rstn     ),
         .vld_s ( fifo_vld ),
@@ -92,6 +97,8 @@ module memory_wrapper #(
     always @(posedge clk or negedge rstn) begin
         if (~rstn) begin
             tr_cnt <= {CNT_WIDTH{1'b0}};
+        end else if (s_vld && s_rdy && m_vld && m_rdy) begin
+            tr_cnt <= tr_cnt;
         end else if (s_vld && s_rdy) begin
             tr_cnt <= tr_cnt + 1'b1;
         end else if (m_vld && m_rdy) begin
@@ -99,6 +106,6 @@ module memory_wrapper #(
         end
     end
     
-    assign s_rdy = (tr_cnt != SRAM_R_LATENCY+1);
+    assign s_rdy = (tr_cnt != SRAM_R_LATENCY+2);
 
 endmodule

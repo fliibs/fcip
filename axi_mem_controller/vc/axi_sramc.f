@@ -9,6 +9,11 @@ $PRJ_ICDIR/common_ip/arbiter/rtl/arb_vrp_matrix.sv
 $PRJ_ICDIR/common_ip/arbiter/rtl/tree_plru.sv
 $PRJ_ICDIR/common_ip/arbiter/rtl/arb_vrp.sv
 
+$PRJ_ICDIR/common_ip/reg_slice/rtl/reg_slice_forward.sv
+$PRJ_ICDIR/common_ip/reg_slice/rtl/reg_slice_backward.sv
+$PRJ_ICDIR/common_ip/reg_slice/rtl/reg_slice_full.sv
+$PRJ_ICDIR/common_ip/reg_slice/rtl/reg_slice.sv
+
 $PRJ_ICDIR/axi_mem_controller/rtl/ECC/rtl/bin2onehot.sv
 $PRJ_ICDIR/axi_mem_controller/rtl/ECC/rtl/hamming_secded_encoder.sv
 $PRJ_ICDIR/axi_mem_controller/rtl/ECC/rtl/hamming_secded_decoder.sv
