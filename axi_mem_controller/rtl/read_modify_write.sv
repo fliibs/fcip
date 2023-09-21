@@ -153,7 +153,7 @@ module read_modify_write #(
                     wstrb_reg   <= {AXI_WSTRB_WIDTH{1'b0}};
                 end
                 DIRECT_W: begin
-                    if (s_aww_vld && &s_aww_strb) begin
+                    if (s_aww_vld && s_aww_rdy && &s_aww_strb) begin
                         // s_aww_rdy   <= 1'b1;
                         arb_req_en  <= 1'b1;
                         rw_flag     <= 1'b1;
@@ -178,7 +178,7 @@ module read_modify_write #(
                     end
                 end
                 RMW_R: begin
-                    if (s_aww_vld && ~&s_aww_strb) begin
+                    if (s_aww_vld && s_aww_rdy && ~&s_aww_strb) begin
                         // s_aww_rdy   <= 1'b0;
                         arb_req_en  <= 1'b1;
                         rw_flag     <= 1'b0;
@@ -288,7 +288,7 @@ module read_modify_write #(
                                 {8{wstrb_reg[19]}}, {8{wstrb_reg[18]}}, {8{wstrb_reg[17]}}, {8{wstrb_reg[16]}}, 
                                 {8{wstrb_reg[15]}}, {8{wstrb_reg[14]}}, {8{wstrb_reg[13]}}, {8{wstrb_reg[12]}}, 
                                 {8{wstrb_reg[11]}}, {8{wstrb_reg[10]}}, {8{wstrb_reg[9]}},  {8{wstrb_reg[8]}}, 
-                                 {8{wstrb_reg[6]}}, {8{wstrb_reg[6]}},  {8{wstrb_reg[5]}},  {8{wstrb_reg[4]}}, 
+                                 {8{wstrb_reg[7]}}, {8{wstrb_reg[6]}},  {8{wstrb_reg[5]}},  {8{wstrb_reg[4]}}, 
                                 {8{wstrb_reg[3]}},  {8{wstrb_reg[2]}},  {8{wstrb_reg[1]}},  {8{wstrb_reg[0]}}
                              };
             default: 

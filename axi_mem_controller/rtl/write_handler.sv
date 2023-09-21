@@ -54,20 +54,7 @@ module write_handler #(
     output logic                              write_handler_idle
 );
 
-
-    localparam AX_PLD_WIDTH   = AXI_ADDR_WIDTH + AXI_ID_WIDTH + 8 + 3 + 2 + AXI_USER_WIDTH; //addr+id+len+size+busrt+user
     localparam ARB_REQ_WIDTH  = 1 + 1 + 1 + AXI_ID_WIDTH + AXI_USER_WIDTH + AXI_ADDR_WIDTH + AXI_DATA_WIDTH; //rw+rmw+last+id+user+addr+data
-
-    logic [AX_PLD_WIDTH-1:0]    s_aw_pld;
-    logic [AX_PLD_WIDTH-1:0]    m_aw_fifo_pld;
-    logic                       m_aw_fifo_vld;
-    logic                       m_aw_fifo_rdy;
-    logic [AXI_ADDR_WIDTH-1:0]  m_aw_fifo_awaddr;
-    logic [AXI_ID_WIDTH-1:0]    m_aw_fifo_awid;
-    logic [7:0]                 m_aw_fifo_awlen;
-    logic [2:0]                 m_aw_fifo_awsize;
-    logic [1:0]                 m_aw_fifo_awburst;
-    logic [AXI_USER_WIDTH-1:0]  m_aw_fifo_awuser;
 
     logic [AXI_ADDR_WIDTH-1:0]  m_split_awaddr;
     logic [AXI_ID_WIDTH-1:0]    m_split_awid;
@@ -115,24 +102,6 @@ module write_handler #(
 
 
     logic [3:0] tr_cnt;
-
-    assign s_aw_pld = {s_awaddr, s_awid, s_awlen, s_awsize, s_awburst, s_awuser};
-    assign {m_aw_fifo_awaddr, m_aw_fifo_awid, m_aw_fifo_awlen, m_aw_fifo_awsize, m_aw_fifo_awburst, m_aw_fifo_awuser} = m_aw_fifo_pld;
-    
-    // aw fifo
-    vrp_fifo #(
-        .PLD_WIDTH ( AX_PLD_WIDTH ),
-        .DEPTH     ( 8            )
-    ) u_aw_fifo (
-        .clk   ( clk           ),
-        .rst_n ( rstn          ),
-        .vld_s ( s_awvld       ),
-        .rdy_s ( s_awrdy       ),
-        .pld_s ( s_aw_pld      ),
-        .vld_m ( m_aw_fifo_vld ),
-        .rdy_m ( m_aw_fifo_rdy ),
-        .pld_m ( m_aw_fifo_pld )
-    );
     
     // transfer split
     transfer_split #(
@@ -143,14 +112,14 @@ module write_handler #(
     ) u_aw_transfer_split(
         .clk     ( clk                ), 
         .rstn    ( rstn               ), 
-        .s_vld   ( m_aw_fifo_vld      ),  
-        .s_rdy   ( m_aw_fifo_rdy      ), 
-        .s_addr  ( m_aw_fifo_awaddr   ), 
-        .s_id    ( m_aw_fifo_awid     ), 
-        .s_len   ( m_aw_fifo_awlen    ), 
-        .s_size  ( m_aw_fifo_awsize   ), 
-        .s_burst ( m_aw_fifo_awburst  ),  
-        .s_user  ( m_aw_fifo_awuser   ),  
+        .s_vld   ( s_awvld            ),  
+        .s_rdy   ( s_awrdy            ), 
+        .s_addr  ( s_awaddr           ), 
+        .s_id    ( s_awid             ), 
+        .s_len   ( s_awlen            ), 
+        .s_size  ( s_awsize           ), 
+        .s_burst ( s_awburst          ),  
+        .s_user  ( s_awuser           ),  
         .m_vld   ( m_split_vld        ), 
         .m_rdy   ( m_split_rdy        ), 
         .m_last  ( m_split_awlast     ),  

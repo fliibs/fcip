@@ -7,16 +7,14 @@ module axi_sramc_dv_top;
     parameter  AXI_DATA_WIDTH      = 64;
     parameter  AXI_WSTRB_WIDTH     = AXI_DATA_WIDTH/8;
     parameter  AXI_USER_WIDTH      = 8;
+    parameter  SRAM_R_LATENCY      = 1;
     parameter  HAS_NARROW_TR       = 1;
     parameter  HAS_UNALIGNED_TR    = 1;
-    // The data bit width of SRAM needs to meet the ecc requirements 
-    localparam ECC_CHECK__WIDTH    = ($clog2($clog2(AXI_DATA_WIDTH) + AXI_DATA_WIDTH) == $clog2(AXI_DATA_WIDTH)) ? $clog2(AXI_DATA_WIDTH) :  $clog2(AXI_DATA_WIDTH)+1;
-    localparam SRAM_DATA_WIDTH     = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1;
-    localparam SRAM_CTRL_WIDTH     = AXI_ID_WIDTH+1+1+1; // rw+rmw+id+last
+    parameter  SRAM_DATA_WIDTH     = 64;
 
     // clk&rstn
-    logic                               clk;
-    logic                               rstn;
+    logic                              clk;
+    logic                              rstn;
     // axi slave interface 
     // aw
     logic                              s_awvalid;
@@ -62,27 +60,13 @@ module axi_sramc_dv_top;
     logic                              s_rlast;
     // Reg
     logic                              axi_sramc_idle;
-    logic                              ecc_err;
     
     // memory wrapper master interface
-    // memory in
-    logic                              m_mi_valid;
-    logic                              m_mi_ready;
-    logic                              m_mi_rw;
-    logic                              m_mi_rmw;
-    logic                              m_mi_axlast;
-    logic [AXI_ID_WIDTH-1:0]           m_mi_axid;
-    logic [AXI_USER_WIDTH-1:0]         m_mi_axuser;
-    logic [AXI_ADDR_WIDTH-1:0]         m_mi_axaddr;
-    logic [SRAM_DATA_WIDTH-1:0]        m_mi_data;
-    // memory out
-    logic                              m_mo_valid;
-    logic                              m_mo_ready;
-    logic                              m_mo_rw;
-    logic                              m_mo_rmw;
-    logic                              m_mo_axlast;
-    logic [AXI_ID_WIDTH-1:0]           m_mo_axid;
-    logic [SRAM_DATA_WIDTH-1:0]        m_mo_data;
+    logic                              mi_ce;
+    logic                              mi_we;
+    logic [AXI_ADDR_WIDTH-1:0]         mi_addr;
+    logic [SRAM_DATA_WIDTH-1:0]        mi_data;
+    logic [SRAM_DATA_WIDTH-1:0]        mo_data;
 
     event   w_event;
     
@@ -93,6 +77,7 @@ module axi_sramc_dv_top;
         .AXI_DATA_WIDTH    ( AXI_DATA_WIDTH   ),
         .AXI_WSTRB_WIDTH   ( AXI_WSTRB_WIDTH  ),
         .AXI_USER_WIDTH    ( AXI_USER_WIDTH   ),
+        .SRAM_R_LATENCY    ( SRAM_R_LATENCY   ),
         .HAS_NARROW_TR     ( HAS_NARROW_TR    ),
         .HAS_UNALIGNED_TR  ( HAS_UNALIGNED_TR )
     ) u_axi_sramc(
@@ -135,43 +120,26 @@ module axi_sramc_dv_top;
         .s_rid                ( s_rid             ), 
         .s_rresp              ( s_rresp           ),
         .s_rlast              ( s_rlast           ),  
-        .m_mi_valid           ( m_mi_valid        ),     
-        .m_mi_ready           ( m_mi_ready        ),   
-        .m_mi_rw              ( m_mi_rw           ),    
-        .m_mi_rmw             ( m_mi_rmw          ),     
-        .m_mi_axlast          ( m_mi_axlast       ),    
-        .m_mi_axid            ( m_mi_axid         ),   
-        .m_mi_axuser          ( m_mi_axuser       ),    
-        .m_mi_axaddr          ( m_mi_axaddr       ),  
-        .m_mi_data            ( m_mi_data         ),   
-        .m_mo_valid           ( m_mo_valid        ),      
-        .m_mo_ready           ( m_mo_ready        ),    
-        .m_mo_rw              ( m_mo_rw           ),  
-        .m_mo_rmw             ( m_mo_rmw          ), 
-        .m_mo_axlast          ( m_mo_axlast       ),    
-        .m_mo_axid            ( m_mo_axid         ),    
-        .m_mo_data            ( m_mo_data         ),  
-        .axi_sramc_idle       ( axi_sramc_idle    ),    
-        .ecc_err              ( ecc_err           )       
+        .m_mi_ce              ( mi_ce             ),
+        .m_mi_we              ( mi_we             ),
+        .m_mi_addr            ( mi_addr           ),
+        .m_mi_data            ( mi_data           ), 
+        .m_mo_data            ( mo_data           ),
+        .axi_sramc_idle       ( axi_sramc_idle    )
     );
 
     // memory wrapper
     memory_wrapper #(
-        .ADDR_WIDTH      ( AXI_ADDR_WIDTH                                                      ),
-        .DATA_WIDTH      ( SRAM_DATA_WIDTH                                                     ),
-        .CTRL_WIDTH      ( SRAM_CTRL_WIDTH                                                     ), // rw+rmw+id+last
-        .PLD_I_WIDTH     ( SRAM_CTRL_WIDTH + AXI_USER_WIDTH + AXI_ADDR_WIDTH + SRAM_DATA_WIDTH ),
-        .PLD_O_WIDTH     ( SRAM_CTRL_WIDTH + SRAM_DATA_WIDTH                                   ),
-        .SRAM_R_LATENCY  ( 1                                                                   )
+        .ADDR_WIDTH      ( AXI_ADDR_WIDTH   ),
+        .DATA_WIDTH      ( SRAM_DATA_WIDTH  )
     ) u_memory_wrapper(
-        .clk    ( clk        ), 
-        .rstn   ( rstn       ), 
-        .s_vld  ( m_mi_valid ), 
-        .s_rdy  ( m_mi_ready ), 
-        .s_pld  ( {m_mi_rw,m_mi_rmw,m_mi_axid,m_mi_axlast,m_mi_axuser,m_mi_axaddr,m_mi_data} ), 
-        .m_vld  ( m_mo_valid ), 
-        .m_rdy  ( m_mo_ready ), 
-        .m_pld  ( {m_mo_rw,m_mo_rmw,m_mo_axid,m_mo_axlast,m_mo_data} )
+        .clk        ( clk        ), 
+        .rstn       ( rstn       ), 
+        .mi_ce      ( mi_ce      ), 
+        .mi_we      ( mi_we      ), 
+        .mi_addr    ( mi_addr    ), 
+        .mi_data    ( mi_data    ), 
+        .mo_data    ( mo_data    ) 
     );
 
     // sim
@@ -352,9 +320,9 @@ module axi_sramc_dv_top;
         end
     end
 
-    initial begin 
-        $fsdbDumpfile("tb_top.fsdb");
-        $fsdbDumpvars("+all");
-    end
+    //initial begin 
+    //    $fsdbDumpfile("tb_top.fsdb");
+    //    $fsdbDumpvars("+all");
+    //end
 
 endmodule

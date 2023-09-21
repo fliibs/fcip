@@ -49,40 +49,7 @@ module read_handler #(
     output logic                              read_handler_idle
 );
 
-
-    localparam AX_PLD_WIDTH = AXI_ADDR_WIDTH + AXI_ID_WIDTH + 8 + 3 + 2 + AXI_USER_WIDTH; //addr+id+len+size+busrt+user
-
-    logic [AX_PLD_WIDTH-1:0]    s_ar_pld;
-    logic [AX_PLD_WIDTH-1:0]    m_ar_fifo_pld;
-    logic                       m_ar_fifo_vld;
-    logic                       m_ar_fifo_rdy;
-    logic [AXI_ADDR_WIDTH-1:0]  m_ar_fifo_araddr;
-    logic [AXI_ID_WIDTH-1:0]    m_ar_fifo_arid;
-    logic [7:0]                 m_ar_fifo_arlen;
-    logic [2:0]                 m_ar_fifo_arsize;
-    logic [1:0]                 m_ar_fifo_arburst;
-    logic [AXI_USER_WIDTH-1:0]  m_ar_fifo_aruser;
-
-
     logic [3:0] tr_cnt;
-
-    assign s_ar_pld = {s_araddr, s_arid, s_arlen, s_arsize, s_arburst, s_aruser};
-    assign {m_ar_fifo_araddr, m_ar_fifo_arid, m_ar_fifo_arlen, m_ar_fifo_arsize, m_ar_fifo_arburst, m_ar_fifo_aruser} = m_ar_fifo_pld;
-    
-    // ar fifo
-    vrp_fifo #(
-        .PLD_WIDTH ( AX_PLD_WIDTH ),
-        .DEPTH     ( 8            )
-    ) u_ar_fifo (
-        .clk   ( clk           ),
-        .rst_n ( rstn          ),
-        .vld_s ( s_arvld       ),
-        .rdy_s ( s_arrdy       ),
-        .pld_s ( s_ar_pld      ),
-        .vld_m ( m_ar_fifo_vld ),
-        .rdy_m ( m_ar_fifo_rdy ),
-        .pld_m ( m_ar_fifo_pld )
-    );
     
     // transfer split
     transfer_split #(
@@ -93,14 +60,14 @@ module read_handler #(
     ) u_ar_transfer_split(
         .clk     ( clk                ), 
         .rstn    ( rstn               ), 
-        .s_vld   ( m_ar_fifo_vld      ),  
-        .s_rdy   ( m_ar_fifo_rdy      ), 
-        .s_addr  ( m_ar_fifo_araddr   ), 
-        .s_id    ( m_ar_fifo_arid     ), 
-        .s_len   ( m_ar_fifo_arlen    ), 
-        .s_size  ( m_ar_fifo_arsize   ), 
-        .s_burst ( m_ar_fifo_arburst  ),  
-        .s_user  ( m_ar_fifo_aruser   ),  
+        .s_vld   ( s_arvld            ),  
+        .s_rdy   ( s_arrdy            ), 
+        .s_addr  ( s_araddr           ), 
+        .s_id    ( s_arid             ), 
+        .s_len   ( s_arlen            ), 
+        .s_size  ( s_arsize           ), 
+        .s_burst ( s_arburst          ),  
+        .s_user  ( s_aruser           ),  
         .m_vld   ( m_req_vld          ), 
         .m_rdy   ( m_req_rdy          ), 
         .m_last  ( m_req_axlast       ),  
@@ -128,7 +95,7 @@ module read_handler #(
             tr_cnt <= 4'b0;
         end else if (s_arvld && s_arrdy) begin
             tr_cnt <= tr_cnt + 1'b1;
-        end else if (s_rvld && s_rrdy) begin
+        end else if (s_rvld && s_rrdy && s_rlast) begin
             tr_cnt <= tr_cnt - 1'b1;
         end
     end

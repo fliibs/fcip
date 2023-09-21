@@ -1,15 +1,12 @@
-module axi_sramc
-#(
+module axi_sramc #(
     parameter  AXI_ADDR_WIDTH    = 32,
     parameter  AXI_ID_WIDTH      = 6,
     parameter  AXI_DATA_WIDTH    = 64,
     parameter  AXI_WSTRB_WIDTH   = AXI_DATA_WIDTH/8,
     parameter  AXI_USER_WIDTH    = 8,
+    parameter  SRAM_R_LATENCY    = 1,
     parameter  HAS_NARROW_TR     = 1,
-    parameter  HAS_UNALIGNED_TR  = 1,
-    // The data bit width of SRAM needs to meet the ecc requirements 
-    localparam ECC_CHECK__WIDTH  = ($clog2($clog2(AXI_DATA_WIDTH) + AXI_DATA_WIDTH) == $clog2(AXI_DATA_WIDTH)) ? $clog2(AXI_DATA_WIDTH) :  $clog2(AXI_DATA_WIDTH)+1,
-    localparam SRAM_DATA_WIDTH   = AXI_DATA_WIDTH + ECC_CHECK__WIDTH + 1
+    parameter  HAS_UNALIGNED_TR  = 1
 ) (
     // clk&rstn
     input logic                               clk,
@@ -59,28 +56,17 @@ module axi_sramc
     output logic                              s_rlast,
     // memory wrapper master interface
     // memory in
-    output logic                              m_mi_valid,
-    input  logic                              m_mi_ready,
-    output logic                              m_mi_rw,
-    output logic                              m_mi_rmw,
-    output logic                              m_mi_axlast,
-    output logic [AXI_ID_WIDTH-1:0]           m_mi_axid,
-    output logic [AXI_USER_WIDTH-1:0]         m_mi_axuser,
-    output logic [AXI_ADDR_WIDTH-1:0]         m_mi_axaddr,
-    output logic [SRAM_DATA_WIDTH-1:0]        m_mi_data,
+    output logic                              m_mi_ce,
+    output logic                              m_mi_we,
+    output logic [AXI_ADDR_WIDTH-1:0]         m_mi_addr,
+    output logic [AXI_DATA_WIDTH-1:0]         m_mi_data,
     // memory out
-    input  logic                              m_mo_valid,
-    output logic                              m_mo_ready,
-    input  logic                              m_mo_rw,
-    input  logic                              m_mo_rmw,
-    input  logic                              m_mo_axlast,
-    input  logic [AXI_ID_WIDTH-1:0]           m_mo_axid,
-    input  logic [SRAM_DATA_WIDTH-1:0]        m_mo_data,
+    input  logic [AXI_DATA_WIDTH-1:0]         m_mo_data,
     // Reg
-    output logic                              axi_sramc_idle,
-    output logic                              ecc_err
+    output logic                              axi_sramc_idle
 
 );
+
     logic read_handler_idle;
     logic write_handler_idle;
     
@@ -113,6 +99,7 @@ module axi_sramc
     logic                              req_aft_arb_vld;  
     logic                              req_aft_arb_rdy;
     logic [ARB_REQ_WIDTH-1:0]          req_aft_arb_pld;
+
     logic                              req_aft_arb_rw;
     logic                              req_aft_arb_rmw;
     logic                              req_aft_arb_axlast;
@@ -120,7 +107,7 @@ module axi_sramc
     logic [AXI_USER_WIDTH-1:0]         req_aft_arb_axuser;
     logic [AXI_ADDR_WIDTH-1:0]         req_aft_arb_axaddr;
     logic [AXI_DATA_WIDTH-1:0]         req_aft_arb_data;
-    
+
     logic                              rsp_b4_dec_vld;
     logic                              rsp_b4_dec_rdy;
     logic                              rsp_b4_dec_rw;
@@ -243,11 +230,11 @@ module axi_sramc
     assign {
             req_aft_arb_rw,req_aft_arb_rmw,req_aft_arb_axlast,req_aft_arb_axid,
             req_aft_arb_axuser,req_aft_arb_axaddr,req_aft_arb_data
-            } = req_aft_arb_pld;
+           } = req_aft_arb_pld;
 
     arb_vrp #(
         .MODE       ( 1             ),
-        .HSK_MODE   ( 1             ),
+        .HSK_MODE   ( 0             ),
         .WIDTH      ( 2             ),
         .PLD_WIDTH  ( ARB_REQ_WIDTH )
     ) u_rw_req_arb(
@@ -260,11 +247,11 @@ module axi_sramc
         .rdy_m   ( req_aft_arb_rdy  ),
         .pld_m   ( req_aft_arb_pld  )
     );
-    
+
     // rw rsp dec
     rw_decoder #(
-        .AXI_ID_WIDTH   ( AXI_ID_WIDTH   ),
-        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH )
+        .AXI_ID_WIDTH    ( AXI_ID_WIDTH   ),
+        .AXI_DATA_WIDTH  ( AXI_DATA_WIDTH )
     ) u_rw_rsp_dec(
         .sel             ( rsp_b4_dec_rmw | rsp_b4_dec_rw ),          
         .s_dec_vld       ( rsp_b4_dec_vld                 ),
@@ -289,55 +276,38 @@ module axi_sramc
         .m_dec_1_axid    ( w_rsp_axid                     ),
         .m_dec_1_data    ( w_rsp_data                     )
     );
-
-    // ecc encoder
-    ecc_encoder #(
-        .AXI_ADDR_WIDTH ( AXI_ADDR_WIDTH  ),
-        .AXI_ID_WIDTH   ( AXI_ID_WIDTH    ),
-        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH  ),
-        .AXI_USER_WIDTH ( AXI_USER_WIDTH  ),
-        .ECC_DATA_WIDTH ( SRAM_DATA_WIDTH )
-    ) u_ecc_encoder(
-        .s_ecc_vld    ( req_aft_arb_vld     ),  
-        .s_ecc_rdy    ( req_aft_arb_rdy     ),  
-        .s_ecc_rw     ( req_aft_arb_rw      ),  
-        .s_ecc_rmw    ( req_aft_arb_rmw     ),  
-        .s_ecc_axlast ( req_aft_arb_axlast  ),   
-        .s_ecc_axid   ( req_aft_arb_axid    ),  
-        .s_ecc_axuser ( req_aft_arb_axuser  ),  
-        .s_ecc_axaddr ( req_aft_arb_axaddr  ), 
-        .s_ecc_data   ( req_aft_arb_data    ),   
-        .m_ecc_vld    ( m_mi_valid          ),  
-        .m_ecc_rdy    ( m_mi_ready          ),  
-        .m_ecc_rw     ( m_mi_rw             ), 
-        .m_ecc_rmw    ( m_mi_rmw            ), 
-        .m_ecc_axlast ( m_mi_axlast         ),  
-        .m_ecc_axid   ( m_mi_axid           ), 
-        .m_ecc_axuser ( m_mi_axuser         ), 
-        .m_ecc_axaddr ( m_mi_axaddr         ),
-        .m_ecc_data   ( m_mi_data           )
+    
+    mem_if_ctrl #(
+        .AXI_ADDR_WIDTH ( AXI_ADDR_WIDTH ),
+        .AXI_ID_WIDTH   ( AXI_ID_WIDTH   ),
+        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ),
+        .AXI_USER_WIDTH ( AXI_USER_WIDTH ),
+        .SRAM_R_LATENCY ( SRAM_R_LATENCY )
+    ) u_mem_if_ctrl(
+        .clk           ( clk                  ),
+        .rstn          ( rstn                 ),
+        .s_req_valid   ( req_aft_arb_vld      ),
+        .s_req_ready   ( req_aft_arb_rdy      ),
+        .s_req_rw      ( req_aft_arb_rw       ),
+        .s_req_rmw     ( req_aft_arb_rmw      ),
+        .s_req_axlast  ( req_aft_arb_axlast   ),
+        .s_req_axid    ( req_aft_arb_axid     ),
+        .s_req_axuser  ( req_aft_arb_axuser   ),
+        .s_req_axaddr  ( req_aft_arb_axaddr   ),
+        .s_req_data    ( req_aft_arb_data     ), 
+        .s_rsp_valid   ( rsp_b4_dec_vld       ), 
+        .s_rsp_ready   ( rsp_b4_dec_rdy       ),
+        .s_rsp_rw      ( rsp_b4_dec_rw        ),
+        .s_rsp_rmw     ( rsp_b4_dec_rmw       ),
+        .s_rsp_axlast  ( rsp_b4_dec_axlast    ),
+        .s_rsp_axid    ( rsp_b4_dec_axid      ), 
+        .s_rsp_data    ( rsp_b4_dec_data      ),
+        .m_mi_ce       ( m_mi_ce              ), 
+        .m_mi_we       ( m_mi_we              ),
+        .m_mi_addr     ( m_mi_addr            ), 
+        .m_mi_data     ( m_mi_data            ),  
+        .m_mo_data     ( m_mo_data            )
     );
 
-    // ecc decoder
-     ecc_decoder #(
-        .AXI_ID_WIDTH   ( AXI_ID_WIDTH    ),
-        .AXI_DATA_WIDTH ( AXI_DATA_WIDTH  ),
-        .ECC_DATA_WIDTH ( SRAM_DATA_WIDTH )
-     ) u_ecc_decoder(
-        .s_ecc_vld    ( m_mo_valid        ),  
-        .s_ecc_rdy    ( m_mo_ready        ),  
-        .s_ecc_rw     ( m_mo_rw           ),  
-        .s_ecc_rmw    ( m_mo_rmw          ),  
-        .s_ecc_axlast ( m_mo_axlast       ),   
-        .s_ecc_axid   ( m_mo_axid         ),  
-        .s_ecc_data   ( m_mo_data         ),   
-        .m_ecc_vld    ( rsp_b4_dec_vld    ),  
-        .m_ecc_rdy    ( rsp_b4_dec_rdy    ),  
-        .m_ecc_rw     ( rsp_b4_dec_rw     ), 
-        .m_ecc_rmw    ( rsp_b4_dec_rmw    ), 
-        .m_ecc_axlast ( rsp_b4_dec_axlast ),  
-        .m_ecc_axid   ( rsp_b4_dec_axid   ), 
-        .m_ecc_data   ( rsp_b4_dec_data   ),
-        .ecc_err      ( ecc_err           )
-    );
+
 endmodule

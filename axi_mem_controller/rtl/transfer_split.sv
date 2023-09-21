@@ -35,7 +35,10 @@ module transfer_split #(
     logic [1:0]                        s_burst_q;
     logic [AXI_USER_WIDTH-1:0]         s_user_q;
 
-    logic [AXI_ADDR_WIDTH-1:0] addr_reg;
+    logic buf_en;
+    logic is_first_tr;
+
+    logic [AXI_ADDR_WIDTH-1:0] addr_nxt;
 
     logic [AXI_ADDR_WIDTH-1:0] m_addr_temp;
     logic [AXI_ADDR_WIDTH-1:0] m_addr_aligned;
@@ -44,6 +47,20 @@ module transfer_split #(
     assign burst_len = s_len + 1'b1;
 
     assign s_rdy = (burst_cnt == 8'h0);
+
+    //always_ff @(posedge clk or negedge rstn) begin
+    //    if (~rstn) begin
+    //        s_rdy <= 1'b1;
+    //    end else if (s_vld && s_rdy) begin
+    //        s_rdy <= 1'b0;
+    //    end else if (burst_cnt == 8'h0) begin
+    //        s_rdy <= 1'b1; 
+    //    end
+    //end
+
+    assign buf_en = |burst_cnt;
+
+    assign is_first_tr = burst_cnt==s_len_q;
 
     always_ff @(posedge clk or negedge rstn) begin
         if (~rstn) begin
@@ -77,17 +94,27 @@ module transfer_split #(
 
     always_ff @(posedge clk or negedge rstn) begin
         if (~rstn) begin
-            addr_reg <= {AXI_ADDR_WIDTH{1'b0}};
+            addr_nxt <= {AXI_ADDR_WIDTH{1'b0}};
         end else if (s_vld && s_rdy) begin
-            addr_reg <= nxt_addr_calc(s_addr, burst_len, s_size, s_burst);
-        end else if (m_vld && m_rdy) begin
-            addr_reg <= nxt_addr_calc(addr_reg, s_len_q, s_size_q, s_burst_q);
+            addr_nxt <= nxt_addr_calc(s_addr, burst_len, s_size, s_burst);
+        end else if (m_vld && m_rdy && ~is_first_tr) begin
+            addr_nxt <= nxt_addr_calc(addr_nxt, s_len_q, s_size_q, s_burst_q);
         end
     end
     
-    assign m_addr_temp = s_vld ? s_addr : addr_reg;
+    //assign m_addr_temp = buf_en ? addr_nxt : s_addr;
 
-    // first transfer addr aligned
+    always_comb begin
+        if (buf_en && is_first_tr) begin
+            m_addr_temp = s_addr_q;
+        end else if (buf_en) begin
+            m_addr_temp = addr_nxt;
+        end else begin
+            m_addr_temp = s_addr;
+        end
+    end
+
+    // transfer addr aligned
     always_comb begin
         if (AXI_DATA_WIDTH == 64) begin
             m_addr_aligned = {m_addr_temp[AXI_ADDR_WIDTH-1:3], 3'h0};
@@ -100,10 +127,10 @@ module transfer_split #(
         end
     end
 
-    assign m_vld  = s_vld || (|burst_cnt);
-    assign m_last = (s_vld && burst_len == 9'h1) || (burst_cnt == 8'b1);
-    assign m_id   = s_vld ? s_id : s_id_q;
-    assign m_user = s_vld ? s_user : s_user_q;
+    assign m_vld  = s_vld || buf_en;
+    assign m_last = (s_vld && s_rdy && burst_len == 9'h1) || (burst_cnt == 8'b1);
+    assign m_id   = buf_en ? s_id_q : s_id;
+    assign m_user = buf_en ? s_user_q : s_user;
     assign m_addr = m_addr_aligned;
 
 

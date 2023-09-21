@@ -32,17 +32,17 @@ module rw_decoder #(
     assign s_dec_rdy = sel ? m_dec_1_rdy : m_dec_0_rdy;
 
     assign m_dec_0_vld    = ~sel && s_dec_vld;
-    assign m_dec_0_rw     = s_dec_rw;
-    assign m_dec_0_rmw    = s_dec_rmw;
-    assign m_dec_0_axlast = s_dec_axlast;
-    assign m_dec_0_axid   = s_dec_axid;
-    assign m_dec_0_data   = s_dec_data;
+    assign m_dec_0_rw     = m_dec_0_vld & s_dec_rw;
+    assign m_dec_0_rmw    = m_dec_0_vld & s_dec_rmw;
+    assign m_dec_0_axlast = m_dec_0_vld & s_dec_axlast;
+    assign m_dec_0_axid   = {AXI_ID_WIDTH{m_dec_0_vld}} & s_dec_axid;
+    assign m_dec_0_data   = {AXI_DATA_WIDTH{m_dec_0_vld}} & s_dec_data;
 
     assign m_dec_1_vld    = sel && s_dec_vld;
-    assign m_dec_1_rw     = s_dec_rw;
-    assign m_dec_1_rmw    = s_dec_rmw;
-    assign m_dec_1_axlast = s_dec_axlast;
-    assign m_dec_1_axid   = s_dec_axid;
-    assign m_dec_1_data   = s_dec_data;
+    assign m_dec_1_rw     = m_dec_1_vld & s_dec_rw;
+    assign m_dec_1_rmw    = m_dec_1_vld & s_dec_rmw;
+    assign m_dec_1_axlast = m_dec_1_vld & s_dec_axlast;
+    assign m_dec_1_axid   = {AXI_ID_WIDTH{m_dec_1_vld}} & s_dec_axid;
+    assign m_dec_1_data   = {AXI_DATA_WIDTH{m_dec_1_vld}} & s_dec_data;
     
 endmodule
