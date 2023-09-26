@@ -1,0 +1,1 @@
+/home/liuyunqi/min/fcip/ahb_mem_controller/rtl/ahb_sramc.sv
