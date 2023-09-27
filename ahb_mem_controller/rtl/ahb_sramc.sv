@@ -97,19 +97,19 @@ module ahb_sramc #(
     assign addr_unaligned = new_tr_en ? s_haddr : haddr_buf;
 
      // transfer addr aligned for sram
-    always_comb begin
-        if (AHB_DATA_WIDTH == 32) begin
-            addr_aligned = {addr_unaligned[31:2], 2'h0};
-        end else if (AHB_DATA_WIDTH == 64) begin
-            addr_aligned = {addr_unaligned[31:3], 3'h0};
-        end else if (AHB_DATA_WIDTH == 128) begin
-            addr_aligned = {addr_unaligned[31:4], 4'h0};
-        end else if (AHB_DATA_WIDTH == 256) begin
-            addr_aligned = {addr_unaligned[31:5], 5'h0};
-        end else begin
-            addr_aligned = {addr_unaligned[31:2], 2'h0};
+    generate
+        if (AHB_DATA_WIDTH == 32) begin: ADDR_ALIGNED32
+            assign addr_aligned = {addr_unaligned[31:2], 2'h0};
+        end else if (AHB_DATA_WIDTH == 64) begin: ADDR_ALIGNED64
+            assign addr_aligned = {addr_unaligned[31:3], 3'h0};
+        end else if (AHB_DATA_WIDTH == 128) begin: ADDR_ALIGNED128
+            assign addr_aligned = {addr_unaligned[31:4], 4'h0};
+        end else if (AHB_DATA_WIDTH == 256) begin: ADDR_ALIGNED256
+            assign addr_aligned = {addr_unaligned[31:5], 5'h0};
+        end else begin: ADDR_ALIGNED32_DEFAULT
+            assign addr_aligned = {addr_unaligned[31:2], 2'h0};
         end
-    end
+    endgenerate
 
     // sram ctrl if gen
     assign m_mi_ce = direct_r || direct_w || rmw_r || rmw_w;
@@ -226,9 +226,15 @@ module ahb_sramc #(
                 32: begin: DATA_WIDTH32
                     always_comb begin
                         case (hsize_buf[2:0])
-                            3'b000:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
-                            3'b001:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
-                            default: wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            3'b000: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            end
+                            3'b001: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
+                            end
+                            default: wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
                         endcase
                     end
 
@@ -239,10 +245,19 @@ module ahb_sramc #(
                 64: begin: DATA_WIDTH64
                     always_comb begin
                         case (hsize_buf[2:0])
-                            3'b000:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
-                            3'b001:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
-                            3'b010:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4] = 4'b1111;
-                            default: wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            3'b000: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            end
+                            3'b001: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
+                            end
+                            3'b010: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4] = 4'b1111;
+                            end 
+                            default: wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
                         endcase
                     end
 
@@ -253,12 +268,25 @@ module ahb_sramc #(
                 end
                 128: begin: DATA_WIDTH128
                     always_comb begin
+                        wdata_strb = (DATA_STRB_WIDTH)'(0);
                         case (hsize_buf[2:0])
-                            3'b000:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
-                            3'b001:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
-                            3'b010:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4] = 4'b1111;
-                            3'b011:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:8] = 8'b1111_1111;
-                            default: wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            3'b000: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            end
+                            3'b001: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
+                            end
+                            3'b010: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4] = 4'b1111;
+                            end
+                            3'b011: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:8] = 8'b1111_1111;
+                            end
+                            default: wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
                         endcase
                     end
 
@@ -271,13 +299,29 @@ module ahb_sramc #(
                 end
                 256: begin: DATA_WIDTH256
                     always_comb begin
+                        wdata_strb = (DATA_STRB_WIDTH)'(0);
                         case (hsize_buf[2:0])
-                            3'b000:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1]  = 1'b1;
-                            3'b001:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2]  = 2'b11;
-                            3'b010:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4]  = 4'b1111;
-                            3'b011:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:8]  = 8'b1111_1111;
-                            3'b100:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:16] = 16'b1111_1111_1111_1111;
-                            default: wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1]  = 1'b1;
+                            3'b000: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            end
+                            3'b001: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
+                            end
+                            3'b010: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:4] = 4'b1111;
+                            end
+                            3'b011: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:8] = 8'b1111_1111;
+                            end
+                            3'b100: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:16] = 16'b1111_1111_1111_1111;
+                            end
+                            default: wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
                         endcase
                     end
 
@@ -292,12 +336,18 @@ module ahb_sramc #(
                                             {8{wdata_strb[3]}}, {8{wdata_strb[2]}}, {8{wdata_strb[1]}}, {8{wdata_strb[0]}}
                                            };
                 end
-                default: begin: DATA_WIDTH32
+                default: begin: DATA_WIDTH32_DEFAULT
                     always_comb begin
                         case (hsize_buf[2:0])
-                            3'b000:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
-                            3'b001:  wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
-                            default: wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            3'b000: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:1] = 1'b1;
+                            end
+                            3'b001: begin
+                                wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
+                                wdata_strb[haddr_buf[BIN_WIDTH-1:0]+:2] = 2'b11;
+                            end
+                            default: wdata_strb[DATA_STRB_WIDTH-1:0] = {DATA_STRB_WIDTH{1'b0}};
                         endcase
                     end
 
