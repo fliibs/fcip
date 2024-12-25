@@ -79,6 +79,16 @@ logic [OCM_AXI_RID_WIDTH-1:0]           rlen_buf       [OCM_DATA_RAM_NUM-1:0]   
 logic [OCM_DATA_RAM_NUM-1:0]            rlast_buf      [OCM_DATA_RAM_NUM-1:0]   ;
 
 //---------------------------upstream signals
+logic [OCM_DATA_RAM_NUM-1:0]            axi_rd_en_buf                           ;
+logic [OCM_DATA_RAM_NUM-1:0]            axi_rd_en_buf_2x                        ;
+logic [OCM_L_DATA_RAM_DATA_WIDTH-1:0]   fifo_data_in                            ;
+logic [OCM_AXI_RID_WIDTH-1:0]           fifo_id_in                              ;
+logic [OCM_AXI_LEN-1:0]                 fifo_len_in                             ;
+logic                                   fifo_last_in                            ;
+logic [OCM_L_DATA_RAM_DATA_WIDTH-1:0]   fifo_data_out                            ;
+logic [OCM_AXI_RID_WIDTH-1:0]           fifo_id_out                              ;
+logic [OCM_AXI_LEN-1:0]                 fifo_len_out                             ;
+logic                                   fifo_last_out                            ;
 logic                                   fifo_wren                               ;
 logic                                   fifo_rden                               ;
 logic [OCM_L_DATA_RAM_DATA_WIDTH-1:0]   fifo_din                                ;
@@ -86,7 +96,12 @@ logic [OCM_L_DATA_RAM_DATA_WIDTH-1:0]   fifo_dout                               
 logic                                   fifo_full                               ;
 logic                                   fifo_empty                              ;
 
-logic [OCM_PACK_FIFO_WIDTH:0]           credit_cnt                              ;
+logic [OCM_PACK_FIFO_ADDR_WIDTH:0]      credit_cnt                              ;
+logic [OCM_AXI_DATA_WIDTH-1:0]          dec_rdata_buf                           ;
+logic                                   dec_rvld_buf                            ;
+logic [OCM_AXI_RID_WIDTH-1:0]           dec_rid_buf                             ;
+logic                                   dec_rlast_buf                           ;
+
 
 //================================================================
 //===========================ocm_data_buffer
@@ -123,14 +138,16 @@ ocm_data_xbar u_ocm_data_xbar(
     .data_ram_din     (data_ram_din     ),
     .data_ram_dout    (data_ram_dout    ),
     .rid              (rid              ),
+    .rlen             (rlen             ),
+    .rlast            (rlast            ),
     .wr_data_ram_done (wr_data_ram_done ),
     .wr_data_ram_id   (wr_data_ram_id   ),
     .rd_data_ram_done (rd_data_ram_done ),
     .rd_data_ram_id   (rd_data_ram_id   ),
     .axi_rd_en        (axi_rd_en        )                               
 );
-genvar i;
 
+genvar i;
 //================================================================
 //===========================ocm_data_ram
 //================================================================ 
@@ -240,13 +257,38 @@ endgenerate
 //================================================================
 //===========================mux
 //================================================================
-    
+always_ff@(posedge clk or negedge rst_n) begin
+    if(~rst_n)              axi_rd_en_buf   <= {OCM_DATA_RAM_NUM{1'b0}} ;
+    else                    axi_rd_en_buf   <= axi_rd_en                ;
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(~rst_n)              axi_rd_en_buf_2x<= {OCM_DATA_RAM_NUM{1'b0}} ;
+    else                    axi_rd_en_buf_2x<= axi_rd_en_buf            ;
+end
+
+assign fifo_wren = |axi_rd_en_buf_2x;
+always_comb begin
+    fifo_data_in   = data_ram_dout[0]   ;
+    fifo_id_in     = rid_buf[0]         ;    
+    fifo_len_in    = rlen_buf[0]        ;
+    fifo_last_in   = rlast_buf[0]       ;
+    for (int j=0;j<OCM_DATA_RAM_NUM;j++) begin
+        if(axi_rd_en_buf_2x[j]==1)
+        fifo_data_in   = data_ram_dout[j]   ;
+        fifo_id_in     = rid_buf[j]         ;  
+        fifo_len_in    = rlen_buf[j]        ;
+        fifo_last_in   = rlast_buf[j]       ;
+    end
+end
+
+assign fifo_din = {fifo_data_in,fifo_id_in,fifo_len_in,fifo_last_in};
 //================================================================
 //===========================fifo
 //================================================================
-cmn_fifo#(
-    .DATA_WIDTH(OCM_L_DATA_RAM_DATA_WIDTH+OCM_AXI_RID_WIDTH+1),
-    .ADDR_WIDTH(OCM_PACK_FIFO_WIDTH      )
+cmn_fifo #(
+    .DATA_WIDTH(OCM_PACK_FIFO_DATA_WIDTH),
+    .ADDR_WIDTH(OCM_PACK_FIFO_ADDR_WIDTH)
 )u_cmn_fifo(
     .clk     (clk        ),
     .rst_n   (rst_n      ),
@@ -259,16 +301,49 @@ cmn_fifo#(
 );
 
 always_ff@(posedge clk or negedge rst_n) begin
-    if(~rst_n)                              credit_cnt <= {{1'b1},{(OCM_PACK_FIFO_WIDTH){1'b0}}}                ;              
-    else if(fifo_rden && |(credit_cnt))     credit_cnt <= credit_cnt                                            ;
-    else if(fifo_rden && !(|credit_cnt))    credit_cnt <= credit_cnt + {{(OCM_PACK_FIFO_WIDTH){1'b0}},{1'b1}}   ;
+    if(~rst_n)                              credit_cnt <= {{1'b1},{(OCM_PACK_FIFO_ADDR_WIDTH){1'b0}}}                ;              
+    else if(fifo_rden && |(credit_cnt))     credit_cnt <= credit_cnt                                                 ;
+    else if(fifo_rden && !(|credit_cnt))    credit_cnt <= credit_cnt + {{(OCM_PACK_FIFO_ADDR_WIDTH){1'b0}},{1'b1}}   ;
 end
 
 always_ff@(posedge clk) begin
     credit <= |(credit_cnt);
 end
+
 //================================================================
 //===========================dec
 //================================================================
+assign {fifo_data_out,fifo_id_out,fifo_len_out,fifo_last_out} = fifo_dout;
+
+always@(posedge clk) begin
+    dec_rdata_buf <= fifo_data_out[OCM_L_DATA_RAM_DATA_WIDTH-1:OCM_AXI_DATA_WIDTH];
+end
+
+always@(posedge clk) begin
+    dec_rid_buf   <= fifo_id_out  ;
+end
+
+always@(posedge clk) begin
+    dec_rlast_buf <= fifo_last_out;
+end
+
+always@(posedge clk or negedge rst_n) begin
+    if(~rst_n)                  dec_rvld_buf <= 1'b0 ;
+    else if(fifo_len_out[1])    dec_rvld_buf <= 1'b1 ;
+    else if(dec_rvld_buf)       dec_rvld_buf <= 1'b0 ;
+end
+
+assign /home/liuyunqi/ymyu/ocm_tree/fcip/common_ipfifo_rden  = !dec_rvld_buf && rrdy && !fifo_empty ;
+assign rpld.rdata = dec_rvld_buf ? dec_rdata_buf : fifo_data_out[OCM_AXI_DATA_WIDTH-1:0]   ;
+assign rpld.rid   = dec_rvld_buf ? dec_rid_buf   : fifo_id_out                             ;
+assign rpld.rresp = 2'b00                                                                  ;
+
+always_comb begin
+    if(~(&fifo_len_out) && fifo_last_out)        rpld.rlast = 1'b1;
+    else if(dec_rlast_buf && dec_rvld_buf)       rpld.rlast = 1'b1;
+    else                                         rpld.rlast = 1'b0;
+end
+
+assign rvld = !fifo_empty ;
 
 endmodule
