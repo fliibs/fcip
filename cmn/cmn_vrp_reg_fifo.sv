@@ -1,4 +1,4 @@
-module cmn_reg_fifo#(
+module cmn_vrp_reg_fifo#(
         parameter  type             PLD_TYPE     = logic          ,
         parameter  integer unsigned ADDR_WIDTH   = 8              ,
         localparam integer unsigned PTR_WIDTH    = ADDR_WIDTH+1   ,
@@ -7,13 +7,13 @@ module cmn_reg_fifo#(
         input  logic                        clk         ,
         input  logic                        rst_n       ,
 
-        input  logic                        vld_s       , // read channel
-        output logic                        rdy_s       , // read channel
-        input  PLD_TYPE                     pld_s       , // read channel
+        input  logic                        in_vld       , // write channel
+        output logic                        in_rdy       , // write channel
+        input  PLD_TYPE                     in_pld       , // write channel
 
-        output logic                        vld_m       , // write channel
-        input  logic                        rdy_m       , // write channel
-        output PLD_TYPE                     pld_m         // write channel
+        output logic                        out_vld       , // read channel
+        input  logic                        out_rdy       , // read channel
+        output PLD_TYPE                     out_pld         // read channel
     );
 
 
@@ -32,10 +32,10 @@ module cmn_reg_fifo#(
     //=====================================
     // interface 
     //=====================================
-    assign rdy_s = ~full;
+    assign in_rdy = ~full;
 
-    assign pld_m = v_entry[rd_addr];
-    assign vld_m = ~empty;
+    assign out_pld = v_entry[rd_addr];
+    assign out_vld = ~empty;
 
     //=====================================
     // pointer
@@ -46,13 +46,13 @@ module cmn_reg_fifo#(
     assign empty   = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0]);
 
     always@(posedge clk or negedge rst_n) begin
-        if(!rst_n)                  wr_ptr <= {PTR_WIDTH{1'b0}}                         ;
-        else if(vld_s&&rdy_s)       wr_ptr <= {{(PTR_WIDTH-1){1'b0}},{1'b1}} + wr_ptr   ;
+        if(!rst_n)                      wr_ptr <= {PTR_WIDTH{1'b0}}                         ;
+        else if(in_vld&&in_rdy)         wr_ptr <= {{(PTR_WIDTH-1){1'b0}},{1'b1}} + wr_ptr   ;
     end
 
     always@(posedge clk or negedge rst_n) begin
-        if(!rst_n)                  rd_ptr <= {PTR_WIDTH{1'b0}}                         ;
-        else if(vld_m&&rdy_m)       rd_ptr <= {{(PTR_WIDTH-1){1'b0}},{1'b1}} + rd_ptr   ;
+        if(!rst_n)                      rd_ptr <= {PTR_WIDTH{1'b0}}                         ;
+        else if(out_vld&&out_rdy)       rd_ptr <= {{(PTR_WIDTH-1){1'b0}},{1'b1}} + rd_ptr   ;
     end
 
     //=====================================
@@ -62,7 +62,7 @@ module cmn_reg_fifo#(
     generate
         for(i=0;i<ADDR_DEPTH;i++) begin
             always@(posedge clk)begin
-                if((wr_addr==i) && !full)    v_entry[i] <= pld_s  ;
+                if((wr_addr==i) && !full)    v_entry[i] <= in_pld  ;
             end
         end
     endgenerate
