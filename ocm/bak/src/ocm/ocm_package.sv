@@ -23,8 +23,9 @@ package ocm_package;
     localparam integer unsigned OCM_PACK_DATA_WIDTH                 = 1024                                                          ;
                 
     //read fifo depth               
-    localparam integer unsigned OCM_PACK_FIFO_DEPTH                 = 8                                                             ; 
-    localparam integer unsigned OCM_PACK_FIFO_WIDTH                 = $clog2(OCM_PACK_FIFO_DEPTH)                                   ;
+    localparam integer unsigned OCM_PACK_FIFO_ADDR_DEPTH            = 8                                                             ; 
+    localparam integer unsigned OCM_PACK_FIFO_ADDR_WIDTH            = $clog2(OCM_PACK_FIFO_ADDR_DEPTH)                              ;
+    localparam integer unsigned OCM_PACK_FIFO_DATA_WIDTH            = OCM_L_DATA_RAM_DATA_WIDTH + OCM_AXI_LEN + OCM_AXI_ID_WIDTH + 1;
 
     //ecc_parameter
     localparam integer unsigned OCM_ECC_DATA_WIDTH                  = OCM_L_DATA_RAM_DATA_WIDTH + OCM_L_DATA_RAM_ADDR_WIDTH         ;
