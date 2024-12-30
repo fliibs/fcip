@@ -1,18 +1,18 @@
-module cmn_sram_fifo#(
+module cmn_vrp_sram_fifo#(
         parameter  type             PLD_TYPE               = logic          ,
         parameter  integer unsigned ADDR_WIDTH             = 8              ,
         localparam integer unsigned PTR_WIDTH              = ADDR_WIDTH+1
     )(
-        input  logic                        clk         ,
-        input  logic                        rst_n       ,
+        input  logic                        clk          ,
+        input  logic                        rst_n        ,
 
-        input  logic                        vld_s       , // read channel
-        output logic                        rdy_s       , // read channel
-        input  PLD_TYPE                     pld_s       , // read channel
+        input  logic                        in_vld       , // write channel
+        output logic                        in_rdy       , // write channel
+        input  PLD_TYPE                     in_pld       , // write channel
 
-        output logic                        vld_m       , // write channel
-        input  logic                        rdy_m       , // write channel
-        output PLD_TYPE                     pld_m         // write channel
+        output logic                        out_vld      , // read channel
+        input  logic                        out_rdy      , // read channel
+        output PLD_TYPE                     out_pld        // read channel
     );
 
     //=====================================
@@ -34,10 +34,10 @@ module cmn_sram_fifo#(
     //=====================================
     // interface 
     //=====================================
-    assign rdy_s = ~full;
+    assign in_rdy = ~full;
 
-    assign pld_m = rd_data;
-    assign vld_m = rden_s1;
+    assign out_pld = rd_data;
+    assign out_vld = rden_s1;
 
     //=====================================
     // pointer
@@ -46,8 +46,8 @@ module cmn_sram_fifo#(
     assign rd_addr = rd_ptr[ADDR_WIDTH-1:0]                 ;
     assign full    = wr_ptr == rd_ptr                       ;
     assign empty   = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0]);
-    assign wren    = vld_s  && rdy_s;
-    assign rden    = ~empty && rdy_m;
+    assign wren    = in_vld  && in_rdy;
+    assign rden    = ~empty && out_rdy;
 
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n)                  wr_ptr <= {PTR_WIDTH{1'b0}}                         ;
@@ -74,7 +74,7 @@ module cmn_sram_fifo#(
         .clk    (clk                        ),
         .wr_en  (wren                       ),
         .wr_addr(wr_addr                    ),
-        .wr_data(pld_s                      ),
+        .wr_data(in_pld                      ),
         .rd_en  (rden                       ),
         .rd_addr(rd_addr                    ),
         .rd_data(rd_data                    )
