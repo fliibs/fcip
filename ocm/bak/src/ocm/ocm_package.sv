@@ -42,9 +42,9 @@ package ocm_package;
     } pack_ocm_aw_pld;
 
     typedef struct packed{
-        logic [OCM_AXI_DATA_WIDTH-1:0]            wdata     ;
-        logic [OCM_AXI_DATA_WIDTH/8-1:0]          wstrb     ;
-        logic                                     wlast     ;
+        logic [OCM_AXI_DATA_WIDTH-1:0]            wdata             ;
+        logic [OCM_AXI_DATA_WIDTH/8-1:0]          wstrb             ;
+        logic                                     wlast             ;
     } pack_ocm_w_pld;
 
     typedef struct packed{
