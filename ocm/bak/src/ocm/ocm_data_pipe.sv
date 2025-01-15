@@ -328,12 +328,12 @@ always@(posedge clk) begin
 end
 
 always@(posedge clk or negedge rst_n) begin
-    if(~rst_n)                  dec_rvld_buf <= 1'b0 ;
+    if(~rst_n)                  dec_rvld_buf <= 1'b0 ; 
     else if(fifo_len_out[1])    dec_rvld_buf <= 1'b1 ;
     else if(dec_rvld_buf)       dec_rvld_buf <= 1'b0 ;
 end
 
-assign /home/liuyunqi/ymyu/ocm_tree/fcip/common_ipfifo_rden  = !dec_rvld_buf && rrdy && !fifo_empty ;
+assign fifo_rden  = !dec_rvld_buf && rrdy && !fifo_empty ;
 assign rpld.rdata = dec_rvld_buf ? dec_rdata_buf : fifo_data_out[OCM_AXI_DATA_WIDTH-1:0]   ;
 assign rpld.rid   = dec_rvld_buf ? dec_rid_buf   : fifo_id_out                             ;
 assign rpld.rresp = 2'b00                                                                  ;

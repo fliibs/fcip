@@ -14,7 +14,7 @@ module ocm_req_arb
     //rob
     input  logic [OCM_ROB_ENTRY_WIDTH-1:0]      rob_id              ,
     input  logic                                rob_id_vld          ,
-    output logic                                rob_id_rdy          ,
+    output logic                                rob_id_rdy          , 
     //w
     input  logic                                wvld                ,
     input  logic                                wlast               ,
@@ -23,8 +23,6 @@ module ocm_req_arb
     //output to hzd check and behavior map
     output pack_ocm_ax_pld                      axpld               ,
     output logic                                axvld               ,
-
-
     //init
     // input  logic                               init              ,
     input  logic [OCM_AXI_ADDR_WIDTH-1:0]      init_rgn 
@@ -111,7 +109,6 @@ module ocm_req_arb
             axpld.rob_id                                          = w_chl_fifo_empty? id_fifo_rd_data : w_chl_fifo_rd_data;
             axpld.op_is_rd                                        = 1'b0                                                  ;
             axpld[$bits(pack_ocm_ax_pld)-1:OCM_ROB_ENTRY_WIDTH+1] = awpld                                                 ;   
-
         end
         // else if(arrdy && !id_fifo_axi_w_chl_en) begin
         else begin
