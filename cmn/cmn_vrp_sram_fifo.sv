@@ -12,7 +12,15 @@ module cmn_vrp_sram_fifo#(
 
         output logic                        out_vld      , // read channel
         input  logic                        out_rdy      , // read channel
-        output PLD_TYPE                     out_pld        // read channel
+        output PLD_TYPE                     out_pld      , // read channel
+
+        output logic                        mem_wr_en   ,
+        output logic    [ADDR_WIDTH-1:0]    mem_wr_addr ,
+        output PLD_TYPE                     mem_wr_data ,
+
+        output logic                        mem_rd_en   ,
+        output logic    [ADDR_WIDTH-1:0]    mem_rd_addr ,
+        input  PLD_TYPE                     mem_rd_data
     );
 
     //=====================================
@@ -67,18 +75,26 @@ module cmn_vrp_sram_fifo#(
     //=====================================
     // sram
     //=====================================
-    cmn_dual_mem_model #(
-        .ADDR_WIDTH(ADDR_WIDTH              ),
-        .DATA_WIDTH($bits(PLD_TYPE)         )
-    ) u_entry (
-        .clk    (clk                        ),
-        .wr_en  (wren                       ),
-        .wr_addr(wr_addr                    ),
-        .wr_data(in_pld                      ),
-        .rd_en  (rden                       ),
-        .rd_addr(rd_addr                    ),
-        .rd_data(rd_data                    )
-    );
+    assign mem_wr_en     = wren   ;
+    assign mem_wr_addr   = wr_addr ;
+    assign mem_wr_data   = in_pld ;
+
+    assign mem_rd_en     = rden    ;
+    assign mem_rd_addr   = rd_addr  ;
+    assign rd_data     = mem_rd_data;
+
+    // cmn_dual_mem_model #(
+    //     .ADDR_WIDTH(ADDR_WIDTH              ),
+    //     .DATA_WIDTH($bits(PLD_TYPE)         )
+    // ) u_entry (
+    //     .clk    (clk                        ),
+    //     .wr_en  (wren                       ),
+    //     .wr_addr(wr_addr                    ),
+    //     .wr_data(in_pld                      ),
+    //     .rd_en  (rden                       ),
+    //     .rd_addr(rd_addr                    ),
+    //     .rd_data(rd_data                    )
+    // );
 
 
 endmodule
