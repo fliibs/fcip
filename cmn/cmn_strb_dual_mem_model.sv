@@ -48,7 +48,7 @@ module cmn_strb_dual_mem_model #(
         forever begin
             @(posedge clk)
             if(wr_en) begin
-                for(int i=0;i<STRB_WIDTH/8;i=i+1)begin
+                for(int i=0;i<STRB_WIDTH;i=i+1)begin
                     if(wr_strb[i]) tmp_data[8*i+:8] = wr_data[8*i+:8];
                 end
                 // if(wr_byte_en[0]) tmp_data[7 : 0] = wr_data[7 : 0];
