@@ -16,11 +16,13 @@ module cmn_reg_slice_backward #(
 
 logic                   vld_buffer; 
 PLD_TYPE                pld_buffer;
+logic                   rdy_buffer;
 
 
 
 assign m_vld = s_vld | vld_buffer;
 assign m_pld = vld_buffer ? pld_buffer : s_pld;
+assign s_rdy = rdy_buffer | ~vld_buffer;
 
 always @(posedge clk or negedge rst_n) begin 
     if(~rst_n)                              vld_buffer <= 1'b0;
@@ -34,8 +36,8 @@ always @(posedge clk or negedge rst_n) begin
 end 
 
 always @(posedge clk or negedge rst_n) begin 
-    if(~rst_n)                              s_rdy <= 1'b1;
-    else                                    s_rdy <= m_rdy;
+    if(~rst_n)                              rdy_buffer <= 1'b1;
+    else                                    rdy_buffer <= m_rdy;
 end
 
 endmodule  

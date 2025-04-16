@@ -39,23 +39,51 @@ module cmn_vrp_sram_fifo#(
     logic                               empty               ;
     logic                               full                ;
 
+    logic                               s_rs_vld            ;
+    logic                               s_rs_rdy            ;
+    PLD_TYPE                            s_rs_pld            ;
+    logic                               m_rs_vld            ;
+    logic                               m_rs_rdy            ;
+    PLD_TYPE                            m_rs_pld            ;
+
     //=====================================
     // interface 
     //=====================================
     assign in_rdy = ~full;
 
-    assign out_pld = rd_data;
-    assign out_vld = rden_s1;
+    assign out_pld = m_rs_vld ? m_rs_pld : rd_data;
+    assign out_vld = m_rs_vld || rden_s1;
+
+    //=====================================
+    // reg slice
+    //=====================================
+    assign s_rs_vld = rden_s1 && (m_rs_vld||~out_rdy);
+    assign s_rs_pld = rd_data;
+
+    assign m_rs_rdy = out_rdy;
+
+    cmn_reg_slice_forward #(
+        .PLD_TYPE(PLD_TYPE)
+    ) u_fwd_rs0 (
+        .clk(clk),
+        .rst_n(rst_n),
+        .s_vld(s_rs_vld),
+        .s_rdy(s_rs_rdy),
+        .s_pld(s_rs_pld),
+        .m_vld(m_rs_vld),
+        .m_rdy(m_rs_rdy),
+        .m_pld(m_rs_pld)
+    );
 
     //=====================================
     // pointer
     //=====================================
     assign wr_addr = wr_ptr[ADDR_WIDTH-1:0]                 ;
     assign rd_addr = rd_ptr[ADDR_WIDTH-1:0]                 ;
-    assign full    = wr_ptr == rd_ptr                       ;
-    assign empty   = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0]);
+    assign full    = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0])                       ;
+    assign empty   = wr_ptr == rd_ptr ;
     assign wren    = in_vld  && in_rdy;
-    assign rden    = ~empty && out_rdy;
+    assign rden    = ~empty && (out_rdy||(~rden_s1&&~m_rs_vld));
 
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n)                  wr_ptr <= {PTR_WIDTH{1'b0}}                         ;
