@@ -23,7 +23,7 @@ module cmn_arb_vrp_matrix #(
     genvar i;
     generate
         for(i=0;i<WIDTH;i=i+1) begin: select_onehot_
-            assign select_onehot[i] =  (~|(v_vld_s&vv_matrix[i])) && (rdy_m && v_vld_s[i]);
+            assign select_onehot[i] =  (~|(v_vld_s&vv_matrix[i])) && v_vld_s[i];
         end
     endgenerate
 
@@ -38,6 +38,6 @@ module cmn_arb_vrp_matrix #(
 
     assign vld_m   = |v_vld_s;
     assign pld_m   = select_pld;
-    assign v_rdy_s = select_onehot;
+    assign v_rdy_s = select_onehot & {WIDTH{rdy_m}};
 
 endmodule
