@@ -1,8 +1,8 @@
 module cmn_fix_arb #(
     parameter type PLD_TYPE = logic
 )(
-    input   logic               clk,
-    input   logic               rst_n,
+    input                       clk,
+    input                       rst_n,
 
     input   logic               s_vld_priority,
     output  logic               s_rdy_priority,

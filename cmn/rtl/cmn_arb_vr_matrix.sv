@@ -16,12 +16,12 @@ logic [WIDTH-1:0]       select_onehot;
 genvar i;
 generate
     for(i=0;i<WIDTH;i=i+1) begin: select_onehot_
-        assign select_onehot[i] =  (~|(v_vld_s&vv_matrix[i])) && v_vld_s[i]; 
+        assign select_onehot[i] =  (~|(v_vld_s&vv_matrix[i])) && (rdy_m && v_vld_s[i]); 
     end 
 endgenerate
 
 
 assign vld_m = |v_vld_s;
-assign v_rdy_s = select_onehot & {WIDTH{rdy_m}};
+assign v_rdy_s = select_onehot;
 
 endmodule

@@ -7,13 +7,13 @@ module cmn_vrp_reg_fifo#(
         input  logic                        clk         ,
         input  logic                        rst_n       ,
 
-        input  logic                        in_vld       , // write channel
-        output logic                        in_rdy       , // write channel
-        input  PLD_TYPE                     in_pld       , // write channel
+        input  logic                        in_vld      , // write channel
+        output logic                        in_rdy      , // write channel
+        input  PLD_TYPE                     in_pld      , // write channel
 
-        output logic                        out_vld       , // read channel
-        input  logic                        out_rdy       , // read channel
-        output PLD_TYPE                     out_pld         // read channel
+        output logic                        out_vld     , // read channel
+        input  logic                        out_rdy     , // read channel
+        output PLD_TYPE                     out_pld       // read channel
     );
 
 
@@ -42,8 +42,8 @@ module cmn_vrp_reg_fifo#(
     //=====================================
     assign wr_addr = wr_ptr[ADDR_WIDTH-1:0]                 ;
     assign rd_addr = rd_ptr[ADDR_WIDTH-1:0]                 ;
-    assign full    = wr_ptr == rd_ptr                       ;
-    assign empty   = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0]);
+    assign empty   = wr_ptr == rd_ptr                       ;
+    assign full    = (wr_ptr[PTR_WIDTH-1] != rd_ptr[PTR_WIDTH-1])&& (wr_ptr[PTR_WIDTH-2:0] == rd_ptr[PTR_WIDTH-2:0]);
 
     always@(posedge clk or negedge rst_n) begin
         if(!rst_n)                      wr_ptr <= {PTR_WIDTH{1'b0}}                         ;

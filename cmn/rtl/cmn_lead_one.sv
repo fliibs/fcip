@@ -2,10 +2,10 @@ module cmn_lead_one #(
     parameter  int unsigned ENTRY_NUM = 16,
     localparam int unsigned AWIDTH    = $clog2(ENTRY_NUM)
 ) (
-    input  logic [ENTRY_NUM-1:0] v_entry_vld    ,
+    input  logic [ENTRY_NUM-1:0] v_entry_vld,
     output logic [ENTRY_NUM-1:0] v_free_idx_oh  ,
     output logic [AWIDTH-1   :0] v_free_idx_bin ,
-    output logic                 v_free_vld 
+    output logic  v_free_vld 
 );
 
 //==============================================================
