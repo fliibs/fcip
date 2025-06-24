@@ -1,3 +1,4 @@
+$COMMON_IP_PATH/rtl/cmn_age_matrix_list.sv
 $COMMON_IP_PATH/rtl/cmn_age_matrix.sv
 $COMMON_IP_PATH/rtl/cmn_arb_vr_matrix.sv
 $COMMON_IP_PATH/rtl/cmn_arb_vrp_matrix.sv
@@ -23,7 +24,6 @@ $COMMON_IP_PATH/rtl/cmn_rob_id_dec.sv
 $COMMON_IP_PATH/rtl/cmn_rob_prealloc.sv
 $COMMON_IP_PATH/rtl/cmn_single_mem_model.sv
 $COMMON_IP_PATH/rtl/cmn_strb_dual_mem_model.sv
-$COMMON_IP_PATH/rtl/cmn_tree_plru_comb.sv
 $COMMON_IP_PATH/rtl/cmn_tree_plru_comb.sv
 $COMMON_IP_PATH/rtl/cmn_tree_plru.sv
 $COMMON_IP_PATH/rtl/cmn_vrp_reg_fifo.sv

@@ -1,4 +1,4 @@
-module reg_slice_forward #(
+module cmn_reg_slice_forward #(
     parameter type PLD_TYPE = logic
 )(
     input                       clk,
