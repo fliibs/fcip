@@ -29,3 +29,4 @@ $COMMON_IP_PATH/rtl/cmn_tree_plru.sv
 $COMMON_IP_PATH/rtl/cmn_vrp_reg_fifo.sv
 $COMMON_IP_PATH/rtl/cmn_vrp_sram_fifo_delay.sv
 $COMMON_IP_PATH/rtl/cmn_vrp_sram_fifo.sv
+$COMMON_IP_PATH/rtl/cmn_ip_mimo_queue.sv
