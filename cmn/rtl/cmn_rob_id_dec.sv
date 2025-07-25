@@ -1,6 +1,6 @@
 module cmn_rob_id_dec#(
     parameter integer unsigned BIN_WIDTH=4,
-    localparam integer unsigned OH_WIDTH=1<<BIN_WIDTH
+    localparam integer unsigned OH_WIDTH=2**BIN_WIDTH
 )(
     input  logic                  in_en   ,
     input  logic [BIN_WIDTH-1:0]  in_index,
