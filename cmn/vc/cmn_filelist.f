@@ -23,7 +23,6 @@ $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vrp_matrix.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vr_matrix.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_plru_node.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_tree_plru_comb.sv
-$COMMON_IP_PATH/rtl/arbiter/cmn_arb_vrp.sv
 $COMMON_IP_PATH/rtl/memory/cmn_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_strb_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_single_mem_model.sv
