@@ -22,7 +22,9 @@ module sync_fifo_reg #(
     output logic [FIFO_WIDTH-1:0]   read_resp_pld,
     input  logic                    read_resp_rdy,
 
-    output logic                    custom_threshold_en
+    output logic                    custom_threshold_en,
+    output logic                    empty,
+    output logic                    full
 );
 
 logic [CNT_WIDTH:0]             wr_ptr;
@@ -31,8 +33,6 @@ logic [CNT_WIDTH-1:0]           wr_ptr_true;
 logic [CNT_WIDTH-1:0]           rd_ptr_true;
 logic                           wr_ptr_msb;
 logic                           rd_ptr_msb;
-logic                           full;
-logic                           empty;
 logic [FIFO_WIDTH-1:0]          array_data[FIFO_DEPTH-1:0];
 logic [CNT_WIDTH-1:0]           fifo_used;
 
