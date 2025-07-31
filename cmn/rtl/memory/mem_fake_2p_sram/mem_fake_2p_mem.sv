@@ -1,5 +1,5 @@
 module mem_fake_2p_mem 
-    import mem_pack::*;
+    import mem_fake_pack::*;
 #(
     parameter integer unsigned MEM_DEPTH = 256,
     localparam int unsigned MEM_ADDR_WIDTH = $clog2(MEM_DEPTH),
@@ -13,7 +13,7 @@ module mem_fake_2p_mem
 
     //write req
     input  logic                        write_req_vld,
-    input  mem_write_req_t              write_req_pld,
+    input  mem_fake_write_req_t         write_req_pld,
     output logic                        write_req_rdy,
 
     //read_req
@@ -49,7 +49,7 @@ logic                        write_buffer_full;
 logic                        write_buffer_empty;
 logic                        write_sram_vld;
 logic                        write_sram_rdy;
-mem_write_req_t              write_sram_pld;
+mem_fake_write_req_t         write_sram_pld;
 
 logic                        read_cmp_vld;
 logic [MEM_ADDR_WIDTH-1:0]   read_cmp_addr;

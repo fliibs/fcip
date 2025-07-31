@@ -1,5 +1,5 @@
 module mem_fake_write_buffer 
-    import mem_pack::*;
+    import mem_fake_pack::*;
 #(
     parameter integer unsigned MEM_DEPTH = 256,
     parameter integer unsigned MEM_ADDR_WIDTH = 8,
@@ -11,7 +11,7 @@ module mem_fake_write_buffer
 
     //write req
     input  logic                        write_req_vld,
-    input  mem_write_req_t              write_req_pld,
+    input  mem_fake_write_req_t         write_req_pld,
     output logic                        write_req_rdy,
 
     //control
@@ -20,7 +20,7 @@ module mem_fake_write_buffer
 
     output logic                        write_vld,
     input  logic                        write_rdy,
-    output mem_write_req_t              write_pld,
+    output mem_fake_write_req_t         write_pld,
 
     //compare
     input  logic                        read_cmp_vld,
@@ -48,7 +48,7 @@ logic                           empty;
 
 logic                           read_cmp_vld_1d;
 logic [WRITE_BUFFER_DEPTH-1:0]  cmp_hit_onehot;
-mem_write_req_t                 write_array_data_sel;
+mem_fake_write_req_t            write_array_data_sel;
 logic [WRITE_BUFFER_DEPTH-1:0]  mask_en;
 logic [WRITE_BUFFER_DEPTH-1:0]  hazard_check[1:0];
 logic [CNT_WIDTH-1:0]           hazard_bin[1:0];
@@ -56,7 +56,7 @@ logic [1:0]                     hazard_en;
 logic                           multi_hit_en;
 logic [CNT_WIDTH-1:0]           multi_hit_addr_index;
 
-mem_write_req_t                 write_array_data[WRITE_BUFFER_DEPTH-1:0];
+mem_fake_write_req_t            write_array_data[WRITE_BUFFER_DEPTH-1:0];
 logic [WRITE_BUFFER_DEPTH-1:0]  write_array_vld;
 
 //logic [WRITE_BUFFER_DEPTH-1:0]  alloc_entry;
