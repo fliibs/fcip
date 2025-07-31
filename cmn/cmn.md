@@ -27,14 +27,15 @@
 
 | name | function |
 |------|----------|
-|cmn_arb_vr_fix      |fix Arbiter |
+|cmn_arb_vrp      |instanced by parameter.0-fix,1-rr,2- |
+<!-- |cmn_arb_vr_fix      |fix Arbiter |
 |cmn_arb_vr_matrix      |matrix Arbiter          |
 |cmn_arb_vr_ld1      |leading one Arbiter|
 |cmn_arb_vr_rr      |round robin Arbiter|
 |cmn_arb_vrp_fix      |fix Arbiter          |
 |cmn_arb_vrp_matrix      |matrix Arbiter          |
 |cmn_arb_vrp_ld1      |leading one Arbiter |
-|cmn_arb_vrp_rr      |round robin Arbiter|
+|cmn_arb_vrp_rr      |round robin Arbiter| -->
 
 | name | function |
 |------|----------|
