@@ -56,19 +56,13 @@ logic [MEM_ADDR_WIDTH-1:0]   read_cmp_addr;
 logic                        read_cmp_hit;
 
 logic [MEM_DATA_WIDTH-1:0]   read_buffer_data;
-
-logic                       read_sram_vld;
-logic [MEM_ADDR_WIDTH-1:0]  read_sram_addr;
-
-logic                       read_out_vld;
-logic                       read_out_rdy;
-logic [MEM_DATA_WIDTH-1:0]  read_out_data;
-logic                       read_slice_vld;
-logic                       read_slice_rdy;
-logic [MEM_DATA_WIDTH-1:0]  read_slice_data;
-
-logic                       fifo_full;
-logic                       fifo_almost_full;
+logic                        read_sram_vld;
+logic [MEM_ADDR_WIDTH-1:0]   read_sram_addr;
+logic                        read_out_vld;
+logic                        read_out_rdy;
+logic [MEM_DATA_WIDTH-1:0]   read_out_data;
+logic                        fifo_full;
+logic                        fifo_almost_full;
 
 mem_fake_write_buffer #(
     .MEM_DEPTH          (MEM_DEPTH),
