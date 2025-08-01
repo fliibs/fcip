@@ -1,7 +1,7 @@
-$COMMON_IP_PATH/rtl/others/cmn_list_lead_one$COMMON_IP_PATH/rtlsv
+$COMMON_IP_PATH/rtl/others/cmn_list_lead_one.sv
 $COMMON_IP_PATH/rtl/others/cmn_reg_slice_full.sv
 $COMMON_IP_PATH/rtl/others/cmn_reg_slice_full_set.sv
-$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
+#$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
 $COMMON_IP_PATH/rtl/others/cmn_reg_slice_backward.sv
 $COMMON_IP_PATH/rtl/others/cmn_reg_slice_forward.sv
 $COMMON_IP_PATH/rtl/others/cmn_lead_one_msb.sv
@@ -35,3 +35,12 @@ $COMMON_IP_PATH/rtl/fifo/bak/cmn_vrp_sram_fifo_delay.sv
 $COMMON_IP_PATH/rtl/fifo/bak/cmn_reg_fifo.sv
 $COMMON_IP_PATH/rtl/fifo/bak/cmn_vrp_sram_fifo.sv
 $COMMON_IP_PATH/rtl/fifo/bak/cmn_vrp_reg_fifo.sv
+
+$COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_pack.sv
+$COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_write_buffer.sv
+$COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_2p_mem.sv
+
+$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/write_req_gen.sv
+$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/read_resp_gen.sv
+$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_2p_mem.sv
+

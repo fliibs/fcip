@@ -121,7 +121,7 @@ endgenerate
 /*========================================*/
 
 //replace data mux common ip
-pld_mux_onehot #(
+cmn_real_mux_onehot #(
     .WIDTH(FIFO_DEPTH),
     .PLD_WIDTH(FIFO_WIDTH)
 )u_read_pld_mux(

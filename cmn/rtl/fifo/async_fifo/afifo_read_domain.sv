@@ -110,7 +110,7 @@ assign empty = ~(|((rptr_async ^ rq2_wptr_sync1) & rptr_sync));
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync;
 
-reg_slice_forward #(
+cmn_reg_slice_forward #(
     .PLD_TYPE(logic [FIFO_WIDTH-1:0])
 ) u_reg_slice_forware(
     .clk        (rclk),

@@ -97,17 +97,6 @@ assign full     = (rd_ptr_true == wr_ptr_true) && (wr_ptr_msb != rd_ptr_msb);
 assign empty    = (rd_ptr == wr_ptr);
 
 /*========================================*/
-/*           Alloc pointer decode         */
-/*========================================*/
-
-bin2onehot #(
-    .ONEHOT_WIDTH (WRITE_BUFFER_DEPTH)
-)u_write_ptr_onehot(
-    .bin_in     (prealloc_entry),
-    .onehot_out (prealloc_entry_onehot)
-);
-
-/*========================================*/
 /*               Write Entry              */
 /*========================================*/
 
@@ -116,7 +105,7 @@ generate
         always_ff @( posedge clk or negedge rst_n ) begin : DATA_ARRAY
             if(~rst_n)
                 write_array_data[i] <= 'b0;
-            else if( (prealloc_entry_onehot[i]==1) && write_handshake)
+            else if( (prealloc_entry == i) && write_handshake)
                 write_array_data[i] <= write_req_pld;
         end
 
@@ -125,7 +114,7 @@ generate
                 write_array_vld[i] <= 'b0;
             else if( rel_write_entry && (rd_ptr==i))
                 write_array_vld[i] <= 'b0;
-            else if( (prealloc_entry_onehot[i]==1) && write_handshake)
+            else if( (prealloc_entry == i) && write_handshake)
                 write_array_vld[i] <= 1'b1;
         end
     end
