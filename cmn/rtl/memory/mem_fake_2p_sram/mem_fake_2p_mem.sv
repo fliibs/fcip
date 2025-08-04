@@ -84,6 +84,9 @@ mem_fake_write_buffer #(
     .write_rdy              (write_sram_rdy       ),
     .write_pld              (write_sram_pld       ),
 
+    .clear                  (clear           ),
+    .stall                  (stall           ),
+
     .read_cmp_vld           (read_cmp_vld    ),
     .read_cmp_addr          (read_cmp_addr   ),
     .read_cmp_hit           (read_cmp_hit    ),
@@ -99,7 +102,7 @@ assign read_cmp_addr        = read_sram_addr;
 
 //replace by fixed arbiter
 
-assign read_req_rdy         = ~(fifo_full || write_buffer_full || fifo_almost_full);  //parameter can config write full priority
+assign read_req_rdy         = ~(fifo_full || write_buffer_full || fifo_almost_full || stall);
 assign read_sram_vld        = read_req_vld && read_req_rdy;
 assign read_sram_addr       = read_req_pld;
 
@@ -147,5 +150,7 @@ sync_fifo_reg #(
     .empty              (),
     .full               ()
 );
+
+assign idle = sync_fifo_idle && write_buffer_empty;
 
 endmodule

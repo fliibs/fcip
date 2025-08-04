@@ -22,6 +22,9 @@ module mem_fake_write_buffer
     input  logic                        write_rdy,
     output mem_fake_write_req_t         write_pld,
 
+    input  logic                        clear,
+    input  logic                        stall,
+
     //compare
     input  logic                        read_cmp_vld,
     input  logic [MEM_ADDR_WIDTH-1:0]   read_cmp_addr,
@@ -65,7 +68,7 @@ logic [WRITE_BUFFER_DEPTH-1:0]  write_array_vld;
 /*                prealloc                */
 /*========================================*/
 
-assign write_req_rdy    = ~full;
+assign write_req_rdy    = ~(full || stall);
 
 assign write_handshake  = write_req_vld && write_req_rdy;
 assign prealloc_entry   = wr_ptr;
@@ -79,12 +82,16 @@ assign buffer_empty     = empty;
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
         rd_ptr <= 'b0;
+    else if(clear)
+        rd_ptr <= 'b0;
     else if(rel_write_entry)
         rd_ptr <= rd_ptr + 1'b1;
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
+        wr_ptr <= 'b0;
+    else if(clear)
         wr_ptr <= 'b0;
     else if(write_handshake)
         wr_ptr <= wr_ptr + 1'b1;
@@ -105,6 +112,8 @@ generate
         always_ff @( posedge clk or negedge rst_n ) begin : DATA_ARRAY
             if(~rst_n)
                 write_array_data[i] <= 'b0;
+            else if(clear)
+                write_array_data[i] <= 'b0;
             else if( (prealloc_entry == i) && write_handshake)
                 write_array_data[i] <= write_req_pld;
         end
@@ -112,9 +121,11 @@ generate
         always_ff @( posedge clk or negedge rst_n ) begin : VALID_ARRAY
             if(~rst_n)
                 write_array_vld[i] <= 'b0;
-            else if( rel_write_entry && (rd_ptr==i))
+            else if(clear)
                 write_array_vld[i] <= 'b0;
-            else if( (prealloc_entry == i) && write_handshake)
+            else if( rel_write_entry && (rd_ptr==i) )
+                write_array_vld[i] <= 'b0;
+            else if( (prealloc_entry == i) && write_handshake )
                 write_array_vld[i] <= 1'b1;
         end
     end
