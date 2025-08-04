@@ -44,3 +44,8 @@ $COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/write_req_gen.sv
 $COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/read_resp_gen.sv
 $COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_2p_mem.sv
 
+$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_write_domain_fz.sv
+$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_read_domain_fz.sv
+$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_read_fz_wrap.sv
+$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_write_fz_wrap.sv
+$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/async_fifo_reg_fz.sv

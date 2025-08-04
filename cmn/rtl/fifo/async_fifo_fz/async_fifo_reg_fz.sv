@@ -1,6 +1,7 @@
-module async_fifo_reg #(
-    parameter  integer unsigned FIFO_DEPTH = 16,
-    parameter  integer unsigned FIFO_WIDTH = 16
+module async_fifo_reg_fz #(
+    parameter integer unsigned FIFO_DEPTH = 16,
+    parameter integer unsigned FIFO_WIDTH = 16,
+    parameter integer unsigned FULL_ZERO  = 0
 )(
     input  logic                    wclk,
     input  logic                    rclk,
@@ -8,8 +9,14 @@ module async_fifo_reg #(
     input  logic                    rrst_n,
 
     //power down
-    input  logic                    stall,
-    input  logic                    clear,
+    input  logic                    read_stall,
+    input  logic                    write_stall,
+    input  logic                    read_clear,
+    input  logic                    write_clear,
+
+    output logic                    read_full_zero,
+    output logic                    write_full_zero,
+
     output logic                    idle,
 
     //write req
@@ -26,16 +33,18 @@ module async_fifo_reg #(
 logic [FIFO_DEPTH-1:0]   wptr_async;
 logic [FIFO_DEPTH-1:0]   rptr_async;
 logic [FIFO_DEPTH-1:0]   rptr_sync;
-logic [FIFO_WIDTH-1:0]   pld_sync;
+logic [FIFO_WIDTH:0]     pld_sync;
 
-afifo_write_domain #(
+afifo_write_fz_wrap #(
     .FIFO_DEPTH (FIFO_DEPTH),
-    .FIFO_WIDTH (FIFO_WIDTH)
+    .FIFO_WIDTH (FIFO_WIDTH),
+    .FULL_ZERO  (FULL_ZERO)
 ) u_afifo_write_domain(
     .wclk           (wclk),
     .wrst_n         (wrst_n),
-    .stall          (stall),
-    .clear          (clear),
+    .write_stall    (write_stall),
+    .write_clear    (write_clear),
+    .write_full_zero(write_full_zero),
     .write_req_vld  (write_req_vld),
     .write_req_pld  (write_req_pld),
     .write_req_rdy  (write_req_rdy),
@@ -45,15 +54,16 @@ afifo_write_domain #(
     .pld_sync       (pld_sync)
 );
 
-afifo_read_domain #(
+afifo_read_fz_wrap #(
     .FIFO_DEPTH (FIFO_DEPTH),
     .FIFO_WIDTH (FIFO_WIDTH)
 ) u_afifo_read_domain(
     .rclk           (rclk),
     .rrst_n         (rrst_n),
-    .stall          (stall),
-    .clear          (clear),
-    .idle           (idle),
+    .read_stall     (read_stall),
+    .read_clear     (read_clear),
+    .read_full_zero (read_full_zero),
+    .read_idle      (idle),
     .read_resp_vld  (read_resp_vld),
     .read_resp_pld  (read_resp_pld),
     .read_resp_rdy  (read_resp_rdy),
