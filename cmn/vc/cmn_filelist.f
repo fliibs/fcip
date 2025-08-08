@@ -17,6 +17,7 @@ $COMMON_IP_PATH/rtl/others/cmn_bin2onehot.sv
 $COMMON_IP_PATH/rtl/others/cmn_lead_one.sv
 $COMMON_IP_PATH/rtl/others/bydlib_sync_aset.sv
 $COMMON_IP_PATH/rtl/others/bydlib_sync_arst.sv
+$COMMON_IP_PATH/rtl/others/cmn_sync_cell.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_age_matrix_list.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vr_matrix.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vrp_matrix.sv
