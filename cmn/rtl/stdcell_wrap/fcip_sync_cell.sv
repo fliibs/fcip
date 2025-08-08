@@ -2,7 +2,7 @@ module fcip_sync_cell #(
     parameter integer unsigned SYNC_WIDTH = 4,
     parameter integer unsigned SYN_NUM = 2, // must upper than 1
     parameter integer unsigned VT_TYPE = 0, // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    parameter logic [SYNC_WIDTH-1:0] SYNC_RST_INIT = {SYNC_WIDTH{1'b0}} // 0: sync_arst, 1: sync_aset
+    parameter logic [SYNC_WIDTH-1:0] RST_VALUE = {SYNC_WIDTH{1'b0}} // 0: sync_arst, 1: sync_aset
 
 ) (
     input logic [SYNC_WIDTH-1   :0] v_sync_d    ,
@@ -16,7 +16,7 @@ module fcip_sync_cell #(
 
     generate
         for(genvar i = 0; i < SYNC_WIDTH; i=i+1) begin : gen_sync_cell
-            if (SYNC_RST_INIT[i]) begin
+            if (RST_VALUE[i]) begin
                 `ifdef FCIP_SYNC_CELL_ARST_MODULE_NAME
                     `FCIP_SYNC_CELL_ARST_MODULE_NAME #(
                         .VT_TYPE(VT_TYPE            ),
