@@ -4,7 +4,7 @@
 `define LVTLL 7
 `define ULVTLL 8
 
-module bydlib_sync_arst #(
+module fcip_sync_arst #(
     parameter integer unsigned SYN_NUM = 2,// must upper than 1
     parameter integer unsigned VT_TYPE = `LVT
 ) (

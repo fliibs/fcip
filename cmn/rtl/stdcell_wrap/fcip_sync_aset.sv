@@ -5,7 +5,7 @@
 `define ULVTLL 8
 
 
-module bydlib_sync_aset #(
+module fcip_sync_aset #(
     parameter integer unsigned SYN_NUM = 2,// must upper than 1
     parameter integer unsigned VT_TYPE = `LVT
 ) (
@@ -20,7 +20,7 @@ module bydlib_sync_aset #(
     logic [SYN_NUM-1:0] meta;
     
     assign Q = meta[SYN_NUM-1];
-    
+
     always_ff @(posedge CP or negedge SDN) begin
         if (~SDN) begin
             meta <= {SYN_NUM{1'b1}};

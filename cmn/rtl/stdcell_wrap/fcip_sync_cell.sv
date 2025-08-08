@@ -1,77 +1,66 @@
+`define FCIP_SYNC_CELL_ARST_MODULE_NAME fcip_sync_arst
+`define FCIP_SYNC_CELL_ASET_MODULE_NAME fcip_sync_aset
 
-
-`define FCIP_SYNC_CELL_ARST_MODULE_NAME bydlib_cdc_demet_arst
-
+`define LVT 0
+`define SVT 1
+`define ULVT 2
+`define LVTLL 7
+`define ULVTLL 8
 module fcip_sync_cell #(
-    parameter integer unsigned          DATA_WIDTH   = 1,
-    parameter integer unsigned          SYNC_STAGES  = 2,
-    parameter logic [DATA_WIDTH-1:0]    RESET_VALUE  = 'b0,
-    parameter integer unsigned          VT_TYPE      = 2   
-    // SVT:1 ULVT:2 LVT:0 ELVT:6 LVTLL:7 ULVTLL:8
-)(
-    input  logic                    clk     ,
-    input  logic                    rst_n   ,
-    input  logic [DATA_WIDTH-1:0]   din     ,
-    output logic [DATA_WIDTH-1:0]   dout
-);
+    parameter integer unsigned SYNC_WIDTH = 4,
+    parameter integer unsigned SYN_NUM = 2, // must upper than 1
+    parameter integer unsigned VT_TYPE = `LVT,
+    parameter logic [SYNC_WIDTH-1:0] SYNC_RST_INIT = {SYNC_WIDTH{1'b0}} // 0: sync_arst, 1: sync_aset
 
-    generate for(genvar i=0; i<DATA_WIDTH; i=i+1) begin : u_sync
-        if(RESET_VALUE[i] == 1'b0) begin : u_sync_rst0
-            `ifdef FCIP_SYNC_CELL_ARST_MODULE_NAME
+) (
+    input logic [SYNC_WIDTH-1   :0] v_sync_d    ,
+    input logic                     dft_si      ,
+    input logic                     dft_se      ,
+    input logic                     clk         ,
+    input logic                     rst_n       ,
+    output logic [SYNC_WIDTH-1  :0] v_sync_q
+);
+    
+
+    generate
+        for(genvar i = 0; i < SYNC_WIDTH; i=i+1) begin : gen_sync_cell
+            if (SYNC_RST_INIT[i]) begin
                 `FCIP_SYNC_CELL_ARST_MODULE_NAME #(
-                    .VT_TYPE    (VT_TYPE        ),
-                    .SYNC_NUM   (SYNC_STAGES    )
-                ) sync_ff (
-                    .D      (din[i]     ),
-                    .CP     (clk        ),
-                    .CDN    (rst_n      ),
-                    .Q      (dout[i]    ),
-                    .SI     (1'b0       ),
-                    .SE     (1'b0       )
+                    .VT_TYPE(VT_TYPE            ),
+                    .SYN_NUM(SYN_NUM            )
+                ) u_sync_arst (
+                    .D      (v_sync_d[i]        ),
+                    .SI     (dft_si             ),
+                    .SE     (dft_se             ),
+                    .CP     (clk                ),
+                    .CDN    (rst_n              ),
+                    .Q      (v_sync_q[i]        )
                 );
-            `else
-                logic [SYNC_STAGES-1:0] sync_ff;
-                always_ff @(posedge clk or negedge rst_n) begin
-                    if(!rst_n) begin
-                        sync_ff <= '0;
-                    end
-                    else begin
-                        sync_ff[0] <= din[i];
-                        for(int j=1; j<SYNC_STAGES; j=j+1) begin
-                            sync_ff[j] <= sync_ff[j-1];
-                        end
-                    end
-                end
-            `endif
-        end
-        else begin
-            `ifdef FCIP_SYNC_CELL_ASET_MODULE_NAME
+            end else begin
                 `FCIP_SYNC_CELL_ASET_MODULE_NAME #(
-                    .VT_TYPE    (VT_TYPE        ),
-                    .SYNC_NUM   (SYNC_STAGES    )
-                ) sync_ff (
-                    .D      (din[i]     ),
-                    .CP     (clk        ),
-                    .SDN    (rst_n      ),
-                    .Q      (dout[i]    ),
-                    .SI     (1'b0       ),
-                    .SE     (1'b0       )
+                    .VT_TYPE(VT_TYPE            ),
+                    .SYN_NUM(SYN_NUM            )
+                ) u_sync_aset (
+                    .D      (v_sync_d[i]        ),
+                    .SI     (dft_si             ),
+                    .SE     (dft_se             ),
+                    .CP     (clk                ),
+                    .SDN    (rst_n              ),
+                    .Q      (v_sync_q[i]        )
                 );
-            `else
-                logic [SYNC_STAGES-1:0] sync_ff;
-                always_ff @(posedge clk or posedge rst_n) begin
-                    if(rst_n) begin
-                        sync_ff <= '1;
-                    end
-                    else begin
-                        sync_ff[0] <= din[i];
-                        for(int j=1; j<SYNC_STAGES; j=j+1) begin
-                            sync_ff[j] <= sync_ff[j-1];
-                        end
-                    end
-                end
-            `endif
+
+            end 
         end
-    end endgenerate
+    endgenerate
+
+
+
+
+
+
+
+
+
+
 
 endmodule
