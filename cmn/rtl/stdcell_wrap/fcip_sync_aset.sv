@@ -1,13 +1,6 @@
-`define LVT 0
-`define SVT 1
-`define ULVT 2
-`define LVTLL 7
-`define ULVTLL 8
-
-
 module fcip_sync_aset #(
     parameter integer unsigned SYN_NUM = 2,// must upper than 1
-    parameter integer unsigned VT_TYPE = `LVT
+    parameter integer unsigned VT_TYPE = 0 // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
 ) (
     input logic D,
     input logic SI,
