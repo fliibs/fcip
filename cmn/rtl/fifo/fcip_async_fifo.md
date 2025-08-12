@@ -3,6 +3,14 @@
 
 
 
+## Auto Clear
+
+这个Async支持Auto Clear功能，当这个功能开启时，这个异步FIFO会在空闲时自动进行指针恢复工作。
+
+这个功能将会在空闲时在跨域传输空包，直到指针逐步恢复到全零。
+
+指针恢复到全零后，full_zero信号会拉高。当然，使用clear信号强制清零指针后，full_zero信号也会拉高。
+
 ## Parameter
 
 
