@@ -56,3 +56,20 @@ LUT就是一个不带fowrading逻辑的基于reg的同步FIFO，用来记录每�
 ## SRAM RW Controller
 
 这个模块是最tricky的部分。
+
+
+
+## Parameter
+
+| Parameter | Default Value | Constraint | Description |
+| --- | --- | --- | --- |
+| FIFO_DEPTH_PER_GROUP | 128 | >=4 | 建议深度不要少于32，少于64应当采用Reg方案|
+| SRAM_GROUP_NUM | 1 | >=1 | SRAM组数，在MCP=1时至少为2，以满带宽读写|
+| DATA_WIDTH | 1 | >=1 | 定义数据宽度|
+| ALMOST_FULL_THRESHOLD | 0 | >=0 | 这个阈值X，代表距离真正的full还有X时，almost_full就会拉高|
+| ALMOST_EMPTY_THRESHOLD | 0 | >=0 | 这个阈值X，代表距离真正的empty还有X时，almost_empty就会拉高|
+| FORWARD_EN | 0 | 1 or 0 | 决定是否启用forwarding，在启用时，FIFO延迟为0，但会引入in to out path|
+| SRAM_ACCESS_LATENCY | 1 | >=1 | 说明外部集成的SRAM访问延迟|
+| SRAM_REQ_PIPE_STAGE | 0 | >=0 | 定义发往SRAM的数据会打几拍|
+| SRAM_RSP_PIPE_STAGE | 0 | >=0 | 定义从SRAM回来的数据会打几拍|
+| MCP_CYCLE | 1 | >= 1| 定义一次读写SRAM需要多少个cycle，根据这个值设置multi cycle path|
