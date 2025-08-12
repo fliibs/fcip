@@ -1,2 +1,6 @@
 /axi_mem_controller/sim/
 /ahb_mem_controller/sim
+
+
+csrc
+simv.daidir

@@ -1,9 +1,8 @@
-module cmn_reg_slice_full_set #(
+module cmn_reg_slice_full #(
     parameter type PLD_TYPE = logic
 )(
     input                       clk,
     input                       rst_n,
-    input                       set, //Synchronous reset signal
 
     input   logic               s_vld,
     output  logic               s_rdy,
@@ -24,28 +23,16 @@ module cmn_reg_slice_full_set #(
     assign m_vld = ~(pntr_w==pntr_r); // not empty
 
     assign m_pld = pntr_r[0] ? pld_r[1] : pld_r[0];
-    
-    logic [63:0] cnt;
-    always @(posedge clk or negedge rst_n) begin 
-        if(~rst_n) cnt <= 'b0;
-        else if(s_vld&&s_rdy) cnt <= cnt + 1'b1;
-    end 
 
-    logic [1:0] pntr_w_tmp;
-    logic [1:0] pntr_r_tmp;
     always @(posedge clk or negedge rst_n) begin 
-        if(~rst_n) pntr_w_tmp <= 2'b0;
-        else if(set) pntr_w_tmp <= 2'b0;
-        else if(s_vld&&s_rdy) pntr_w_tmp <= pntr_w + 1'b1;
+        if(~rst_n)              pntr_w <= 2'b0;
+        else if(s_vld&&s_rdy)   pntr_w <= pntr_w + 1'b1;
     end
-    assign pntr_w = pntr_w_tmp & {~set, ~set};
-    
+
     always @(posedge clk or negedge rst_n) begin 
-        if(~rst_n) pntr_r_tmp <= 2'b0;
-        else if(set) pntr_r_tmp <= 2'b0;
-        else if(m_rdy&&m_vld) pntr_r_tmp <= pntr_r + 1'b1;
+        if(~rst_n)              pntr_r <= 2'b0;
+        else if(m_rdy&&m_vld)   pntr_r <= pntr_r + 1'b1;
     end
-    assign pntr_r = pntr_r_tmp & {~set, ~set};
 
     genvar i;
     generate
@@ -56,8 +43,5 @@ module cmn_reg_slice_full_set #(
             end
         end 
     endgenerate
-
-
-
 
 endmodule   

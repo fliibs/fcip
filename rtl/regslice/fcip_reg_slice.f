@@ -1,0 +1,1 @@
+$FCIP_DIR/rtl/regslice/fcip_reg_slice.sv
