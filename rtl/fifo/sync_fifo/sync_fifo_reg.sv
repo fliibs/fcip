@@ -40,9 +40,9 @@ logic [CNT_WIDTH-1:0]           fifo_used;
 /*              read control              */
 /*========================================*/
 
-assign rinc             = ~empty && read_resp_rdy;
 assign read_resp_pld    = array_data[rd_ptr_true];
-assign read_resp_vld    = rinc;
+assign read_resp_vld    = ~empty;
+assign rinc             = (~empty) && read_resp_rdy;
 
 /*========================================*/
 /*             write control              */
@@ -78,6 +78,24 @@ assign custom_threshold_en  = (fifo_used == THRESHOLD);
 
 assign {wr_ptr_msb,wr_ptr_true} = wr_ptr;
 assign {rd_ptr_msb,rd_ptr_true} = rd_ptr;
+
+//always_ff @( posedge clk or negedge rst_n ) begin
+//    if(~rst_n)
+//        full <= 'b0;
+//    else if((rd_ptr_true == wr_ptr_true) && (wr_ptr_msb != rd_ptr_msb))
+//        full <= 1'b1;
+//    else 
+//        full <= 1'b0;
+//end
+
+//always_ff @( posedge clk or negedge rst_n ) begin
+//    if(~rst_n)
+//        empty <= 'b0;
+//    else if(rd_ptr == wr_ptr)
+//        empty <= 1'b1;
+//    else 
+//        empty <= 1'b0;
+//end
 
 assign full     = (rd_ptr_true == wr_ptr_true) && (wr_ptr_msb != rd_ptr_msb);
 assign empty    = (rd_ptr == wr_ptr);

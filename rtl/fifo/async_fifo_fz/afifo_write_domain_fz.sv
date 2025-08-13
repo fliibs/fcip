@@ -34,6 +34,7 @@ logic [FIFO_DEPTH-1:0]  wq2_rptr_sync1;
 logic [FIFO_WIDTH-1:0]  mem_array[FIFO_DEPTH-1:0];
 logic                   rd_async_ptr_zero;
 logic                   wr_ptr_zero;
+logic [FIFO_DEPTH-1:0]  wptr_async_inner;
 
 /*========================================*/
 /*              write stall               */
@@ -72,8 +73,18 @@ end
 
 //write pointer async for read domain compare
 
-assign wptr_async_nxt = {wptr_async[FIFO_DEPTH-2:0],~wptr_async[FIFO_DEPTH-1]};;
+assign wptr_async_nxt = {wptr_async_inner[FIFO_DEPTH-2:0],~wptr_async_inner[FIFO_DEPTH-1]};
 
+always_ff @( posedge wclk or negedge wrst_n ) begin
+    if(~wrst_n)
+        wptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+    else if(write_clear)
+        wptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+    else if(winc)
+        wptr_async_inner <= wptr_async_nxt;
+end
+
+// no fanout wptr_async pointer for sdc marker
 always_ff @( posedge wclk or negedge wrst_n ) begin
     if(~wrst_n)
         wptr_async <= {{(FIFO_DEPTH){1'b0}}};
@@ -93,11 +104,7 @@ always_ff @( posedge wclk or negedge wrst_n ) begin
     if(~wrst_n)begin
         wq2_rptr_sync0 <= {{(FIFO_DEPTH){1'b0}}};
         wq2_rptr_sync1 <= {{(FIFO_DEPTH){1'b0}}};
-    end else if(write_clear)begin
-        wq2_rptr_sync0 <= {{(FIFO_DEPTH){1'b0}}};
-        wq2_rptr_sync1 <= {{(FIFO_DEPTH){1'b0}}};
-    end
-    else begin
+    end else begin
         wq2_rptr_sync0 <= rptr_async;
         wq2_rptr_sync1 <= wq2_rptr_sync0;
     end
@@ -107,7 +114,7 @@ end
 /*               ptr compare              */
 /*========================================*/
 
-assign full = |((wptr_async ^ wq2_rptr_sync1) & wptr_sync);
+assign full = |((wptr_async_inner ^ wq2_rptr_sync1) & wptr_sync);
 
 /*========================================*/
 /*               Reg entry                */
@@ -115,12 +122,8 @@ assign full = |((wptr_async ^ wq2_rptr_sync1) & wptr_sync);
 
 generate
     for(genvar i=0 ; i < FIFO_DEPTH ; i++)
-        always_ff @( posedge wclk or negedge wrst_n ) begin : AFIFO_REG_ENTRY
-            if(~wrst_n)
-                mem_array[i] <= 'b0;
-            else if(write_clear)
-                mem_array[i] <= 'b0;
-            else if(wptr_sync[i] && winc)
+        always_ff @( posedge wclk ) begin : AFIFO_REG_ENTRY
+            if(wptr_sync[i] && winc)
                 mem_array[i] <= write_req_pld;
         end
 endgenerate
@@ -129,14 +132,36 @@ endgenerate
 /*               Read Mux                 */
 /*========================================*/
 
-//replace data mux common ip
-cmn_real_mux_onehot #(
-    .WIDTH(FIFO_DEPTH),
-    .PLD_WIDTH(FIFO_WIDTH)
-)u_read_pld_mux(
-    .select_onehot  (rptr_sync),
-    .v_pld          (mem_array),
-    .select_pld     (pld_sync)
-);
+logic [FIFO_DEPTH-1:0]  select_onehot;
+logic [FIFO_DEPTH-1:0]  pld_mux_rev         [FIFO_WIDTH-1:0];
+logic [FIFO_DEPTH-1:0]  pld_mux_rev_select  [FIFO_WIDTH-1:0]; 
+logic [FIFO_WIDTH-1:0]  pld_mux_select;
+
+assign select_onehot = rptr_sync;
+
+genvar i,j;
+generate
+    for(i=0;i<FIFO_DEPTH;i=i+1) begin: row
+        for(j=0;j<FIFO_WIDTH;j=j+1) begin: col 
+            assign pld_mux_rev[j][i] = mem_array[i][j];
+        end 
+    end
+endgenerate
+
+genvar k;
+generate
+    for(k=0;k<FIFO_WIDTH;k=k+1) begin: PLD_WIDTH_ 
+        assign pld_mux_rev_select[k] = pld_mux_rev[k] & select_onehot;
+    end
+endgenerate
+
+genvar l;
+generate
+    for(l=0;l<FIFO_WIDTH;l=l+1) begin: select_pld_data
+        assign pld_mux_select[l] = |pld_mux_rev_select[l];
+    end 
+endgenerate
+
+assign pld_sync = pld_mux_select;
 
 endmodule

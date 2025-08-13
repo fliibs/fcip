@@ -69,7 +69,7 @@ logic                        spram1_fifo_idle;
 /*              Write req gen             */
 /*========================================*/
 
-write_req_gen #(
+fifo_fake_write_req_gen #(
     .MEM_DEPTH      (MEM_DEPTH),
     .MEM_DATA_WIDTH (MEM_DATA_WIDTH)
 )u_write_req_gen(
@@ -196,7 +196,7 @@ sync_fifo_spram #(
 /*              Read Resp gen             */
 /*========================================*/
 
-read_resp_gen #(
+fifo_fake_read_resp_gen #(
     .MEM_DEPTH      (MEM_DEPTH),
     .MEM_DATA_WIDTH (MEM_DATA_WIDTH),
     .READ_SFIFO_DEPTH(READ_SFIFO_DEPTH)
