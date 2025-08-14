@@ -1,1 +1,1 @@
-$FCIP_DIR/rtl/regslice/fcip_reg_slice.sv
+$COMMON_IP_PATH/rtl/regslice/fcip_reg_slice.sv
