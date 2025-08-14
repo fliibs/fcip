@@ -1,4 +1,4 @@
-module write_req_gen
+module fifo_fake_write_req_gen
 #(
     parameter integer unsigned MEM_DEPTH = 256,
     parameter integer unsigned MEM_DATA_WIDTH = 128,
@@ -36,14 +36,14 @@ module write_req_gen
 
 logic   write_alloc_index;
 logic   write_req_handshake;
-logic   lut_full;
+//logic   lut_full;
 
 /*========================================*/
 /*              Write stall               */
 /*========================================*/
 
-assign lut_full                     = write_lut_req_rdy;
-assign write_req_rdy                = (write_spram0_req_rdy || write_spram1_req_rdy) && ~lut_full;
+//assign lut_full                     = write_lut_req_rdy;
+assign write_req_rdy                = (write_spram0_req_rdy || write_spram1_req_rdy) && write_lut_req_rdy;
 assign write_req_handshake          = write_req_vld && write_req_rdy;
 
 /*========================================*/
@@ -75,10 +75,13 @@ assign write_lut_req_pld = write_alloc_index; // 0: spram0 , 1:spram1
 /*           Sram write req gen           */
 /*========================================*/
 
-assign write_spram0_req_vld  = (write_alloc_index==0) && write_req_handshake;
+//assign write_spram0_req_vld  = (write_alloc_index==0) && write_req_handshake;
+
+assign write_spram0_req_vld  = ((write_prealloc_index==0) || (write_spram0_req_rdy && ~write_spram1_req_rdy)) && write_req_handshake;
 assign write_spram0_req_pld  = write_req_pld;
 
-assign write_spram1_req_vld = (write_alloc_index==1) && write_req_handshake;
+//assign write_spram1_req_vld  = (write_alloc_index==1) && write_req_handshake;
+assign write_spram1_req_vld  = ((write_prealloc_index==1) || (~write_spram1_req_rdy && write_spram1_req_rdy)) && write_req_handshake;
 assign write_spram1_req_pld  = write_req_pld;
 
 endmodule

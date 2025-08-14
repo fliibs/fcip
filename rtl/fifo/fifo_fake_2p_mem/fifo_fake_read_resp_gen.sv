@@ -1,4 +1,4 @@
-module read_resp_gen
+module fifo_fake_read_resp_gen
 #(
     parameter integer unsigned MEM_DEPTH = 256,
     parameter integer unsigned MEM_DATA_WIDTH = 128,
@@ -64,10 +64,9 @@ assign read_spram1_rdy          = spram1_rd_en && read_lut_handshake;
 /*            read resp buffer            */
 /*========================================*/
 
-assign read_out_data = read_spram1_vld ? read_spram1_rdata : read_spram0_rdata;
-assign read_out_vld  = read_spram0_vld || read_spram1_vld;
-
-assign sync_fifo_full = ~read_out_rdy;
+assign read_out_data    = read_spram1_vld ? read_spram1_rdata : read_spram0_rdata;
+assign read_out_vld     = (read_spram0_vld && read_spram0_rdy) || (read_spram1_vld && read_spram1_rdy);
+assign sync_fifo_full   = ~read_out_rdy;
 
 sync_fifo_reg #(
     .FIFO_DEPTH(READ_SFIFO_DEPTH),
