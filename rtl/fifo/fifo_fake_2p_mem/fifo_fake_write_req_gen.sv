@@ -65,8 +65,9 @@ end
 /*               Write  alloc             */
 /*========================================*/
 
-assign write_alloc_index    = (write_spram0_req_rdy && write_spram1_req_rdy) ? write_prealloc_index :
-                                                        write_spram1_req_rdy ? 1'b1 : 1'b0;
+//assign write_alloc_index    = (write_spram0_req_rdy && write_spram1_req_rdy) ? write_prealloc_index : write_spram1_req_rdy ? 1'b1 : 1'b0;
+
+assign write_alloc_index = write_spram0_req_vld ? 1'b0 : 1'b1;
 
 assign write_lut_req_vld = write_req_handshake;
 assign write_lut_req_pld = write_alloc_index; // 0: spram0 , 1:spram1
