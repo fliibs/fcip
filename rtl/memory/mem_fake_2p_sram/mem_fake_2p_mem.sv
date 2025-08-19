@@ -129,7 +129,9 @@ assign fifo_full        = ~(read_out_rdy);
 sync_fifo_reg #(
     .FIFO_DEPTH(FIFO_DEPTH),
     .FIFO_WIDTH(MEM_DATA_WIDTH),
-    .THRESHOLD(FIFO_THRESHOLD)
+    .ALMOST_FULL_THRESHOLD (FIFO_THRESHOLD),
+    .ALMOST_EMPTY_THRESHOLD(FIFO_THRESHOLD),
+    .FORWARD_EN(0)
 ) u_sync_fifo(
     .clk                (clk),
     .rst_n              (rst_n),
@@ -146,7 +148,8 @@ sync_fifo_reg #(
     .read_resp_pld      (read_resp_pld),
     .read_resp_rdy      (read_resp_rdy),
 
-    .custom_threshold_en(fifo_almost_full),
+    .almost_full        (fifo_almost_full),
+    .almost_empty       (),
     .empty              (),
     .full               ()
 );

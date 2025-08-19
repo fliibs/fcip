@@ -18,6 +18,7 @@ $COMMON_IP_PATH/rtl/others/cmn_lead_one.sv
 $COMMON_IP_PATH/rtl/stdcell_wrap/fcip_sync_aset.sv
 $COMMON_IP_PATH/rtl/stdcell_wrap/fcip_sync_arst.sv
 $COMMON_IP_PATH/rtl/stdcell_wrap/fcip_sync_cell.sv
+$COMMON_IP_PATH/rtl/stdcell_wrap/fcip_marker.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_age_matrix_list.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vr_matrix.sv
 $COMMON_IP_PATH/rtl/arbiter/back/cmn_arb_vrp_matrix.sv
@@ -38,7 +39,6 @@ $COMMON_IP_PATH/rtl/memory/cmn_single_mem_model.sv
 
 -f $COMMON_IP_PATH/rtl/regslice/fcip_reg_slice.f
 
-$COMMON_IP_PATH/rtl/fifo/sync_fifo/sync_fifo_spram.sv
 $COMMON_IP_PATH/rtl/fifo/sync_fifo/sync_fifo_reg.sv
 //$COMMON_IP_PATH/rtl/fifo/bak/cmn_vrp_sram_fifo_delay.sv
 //$COMMON_IP_PATH/rtl/fifo/bak/cmn_reg_fifo.sv
@@ -56,12 +56,9 @@ $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_pack.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_write_buffer.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_2p_mem.sv
 
-$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_write_req_gen.sv
-$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_read_resp_gen.sv
-$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_2p_mem.sv
+//$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_write_req_gen.sv
+//$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_read_resp_gen.sv
+//$COMMON_IP_PATH/rtl/fifo/fifo_fake_2p_mem/fifo_fake_2p_mem.sv
 
-$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_write_domain_fz.sv
-$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_read_domain_fz.sv
-$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_read_fz_wrap.sv
-$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/afifo_write_fz_wrap.sv
-$COMMON_IP_PATH/rtl/fifo/async_fifo_fz/async_fifo_reg_fz.sv
+$COMMON_IP_PATH/rtl/memory/fcip_mem_ctrl_wrap/fcip_mem_ctrl_wrap.sv
+-f $COMMON_IP_PATH/rtl/fifo/sync_fifo/fcip_sync_fifo_spram/fcip_sync_fifo_spram.f

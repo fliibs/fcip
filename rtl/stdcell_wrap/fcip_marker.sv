@@ -10,7 +10,7 @@ module fcip_marker #(
     generate for(genvar i=0; i<DATA_WIDTH; i=i+1) begin : u_marker
     `ifdef FCIP_TSMC_N4P_H210
         BUFFMZD4BWP210H6P51CNODLVT SIZE_ONLY(.I(I[i]), .Z(Z[i]));
-    `ifdef FCIP_STMC_N4P_H280
+    `elsif FCIP_STMC_N4P_H280
         BUFFKBD5BWP280H6P57CNODLVT SIZE_ONLY(.I(I[i]), .Z(Z[i]));
     `elsif FCIP_TSMC_N4A_H210
         //todo SIZE_ONLY(.I(I[i]), .Z(Z[i]));
