@@ -1,10 +1,10 @@
 module fcip_req_rsp_afifo_mst #(
-    parameter integer unsigned SYNC_STAGE   = 3     ,
-    parameter integer unsigned FIFO_DEPTH   = 16    ,
-    parameter integer unsigned AUTO_CLEAR   = 1     ,
-    parameter integer unsigned REQ_WIDTH    = 32    ,
-    parameter integer unsigned RSP_WIDTH    = 32    ,
-    localparam int unsigned PLD_SYNC_WIDTH  = REQ_WIDTH+1
+    parameter integer unsigned SYNC_STAGE       = 3     ,
+    parameter integer unsigned FIFO_DEPTH       = 16    ,
+    parameter integer unsigned AUTO_CLEAR_EN    = 1     ,
+    parameter integer unsigned REQ_WIDTH        = 32    ,
+    parameter integer unsigned RSP_WIDTH        = 32    ,
+    localparam int unsigned PLD_SYNC_WIDTH      = REQ_WIDTH+1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -44,13 +44,13 @@ logic                   rsp_ext_m_rdy ;
 logic [REQ_WIDTH:0]     rsp_ext_m_pld ;
 logic                   rsp_ext_m_last;
 
-    // request async fifo mst
+// request async fifo mst
 
 afifo_mst #(
-    .FIFO_DEPTH (FIFO_DEPTH),
-    .DATA_WIDTH (REQ_WIDTH+1),
-    .FULL_ZERO  (AUTO_CLEAR),
-    .SYNC_STAGE (SYNC_STAGE)
+    .FIFO_DEPTH     (FIFO_DEPTH),
+    .DATA_WIDTH     (REQ_WIDTH+1),
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .SYNC_STAGE     (SYNC_STAGE)
 ) u_req_afifo_dst(
     .rclk           (clk),
     .rrst_n         (rst_n),
@@ -78,10 +78,10 @@ afifo_mst #(
     // response async fifo slv
 
     afifo_slv #(
-        .FIFO_DEPTH (FIFO_DEPTH),
-        .DATA_WIDTH (RSP_WIDTH+1),
-        .FULL_ZERO  (AUTO_CLEAR),
-        .SYNC_STAGE (SYNC_STAGE)
+        .FIFO_DEPTH     (FIFO_DEPTH),
+        .DATA_WIDTH     (RSP_WIDTH+1),
+        .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+        .SYNC_STAGE     (SYNC_STAGE)
     ) u_rsp_afifo_src(
         .wclk           (clk),
         .wrst_n         (rst_n),

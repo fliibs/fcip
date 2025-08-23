@@ -1,7 +1,7 @@
 module async_fifo_reg #(
     parameter  integer unsigned FIFO_DEPTH = 16,
     parameter  integer unsigned DATA_WIDTH = 16,
-    parameter integer unsigned  FULL_ZERO  = 0,
+    parameter integer unsigned  AUTO_CLEAR_EN  = 0,
     parameter integer unsigned  SYNC_STAGE = 2
 )(
     input  logic                    wclk,
@@ -37,10 +37,10 @@ logic [FIFO_DEPTH-1:0]   rptr_sync;
 logic [DATA_WIDTH:0]     pld_sync;
 
 afifo_slv #(
-    .FIFO_DEPTH (FIFO_DEPTH),
-    .DATA_WIDTH (DATA_WIDTH),
-    .FULL_ZERO  (FULL_ZERO),
-    .SYNC_STAGE (SYNC_STAGE)
+    .FIFO_DEPTH     (FIFO_DEPTH),
+    .DATA_WIDTH     (DATA_WIDTH),
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .SYNC_STAGE     (SYNC_STAGE)
 ) u_afifo_slv(
     .wclk           (wclk),
     .wrst_n         (wrst_n),
@@ -60,10 +60,10 @@ afifo_slv #(
 );
 
 afifo_mst #(
-    .FIFO_DEPTH (FIFO_DEPTH),
-    .DATA_WIDTH (DATA_WIDTH),
-    .FULL_ZERO  (FULL_ZERO),
-    .SYNC_STAGE (SYNC_STAGE)
+    .FIFO_DEPTH     (FIFO_DEPTH),
+    .DATA_WIDTH     (DATA_WIDTH),
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .SYNC_STAGE     (SYNC_STAGE)
 ) u_afifo_mst(
     .rclk           (rclk),
     .rrst_n         (rrst_n),

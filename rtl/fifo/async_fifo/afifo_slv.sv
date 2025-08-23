@@ -1,7 +1,7 @@
 module afifo_slv #(
     parameter integer unsigned  FIFO_DEPTH = 16,
     parameter integer unsigned  DATA_WIDTH = 16,
-    parameter integer unsigned  FULL_ZERO  = 0,
+    parameter integer unsigned  AUTO_CLEAR_EN  = 0,
     parameter integer unsigned  SYNC_STAGE = 2
 )(
     input  logic                    wclk,
@@ -52,7 +52,7 @@ logic                   bubble_gen_rdy;
 /*========================================*/
 
 assign bubble_gen_rdy   = ~write_full_zero;
-assign bubble_req_vld   = bubble_gen_rdy && (FULL_ZERO==1);
+assign bubble_req_vld   = bubble_gen_rdy && (AUTO_CLEAR_EN==1);
 assign bubble_req_pld   = {(DATA_WIDTH+1){1'b0}};
 
 /*========================================*/

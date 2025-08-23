@@ -2,7 +2,7 @@
 module afifo_mst #(
     parameter integer unsigned FIFO_DEPTH = 16,
     parameter integer unsigned DATA_WIDTH = 16,
-    parameter integer unsigned FULL_ZERO  = 0,
+    parameter integer unsigned AUTO_CLEAR_EN  = 0,
     parameter integer unsigned SYNC_STAGE = 2
 )(
     input  logic                    rclk,
@@ -179,7 +179,7 @@ end
 /*========================================*/
 
 generate
-    if(FULL_ZERO == 1)begin
+    if(AUTO_CLEAR_EN == 1)begin
         logic                       read_resp_mask;
         logic                       bubble_en;
 

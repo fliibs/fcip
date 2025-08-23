@@ -1,37 +1,47 @@
 module mem_fake_2p_mem 
-    import mem_fake_pack::*;
 #(
-    parameter integer unsigned MEM_DEPTH = 256,
-    localparam int unsigned MEM_ADDR_WIDTH = $clog2(MEM_DEPTH),
-    parameter integer unsigned MEM_DATA_WIDTH = 128,
-    parameter integer unsigned WRITE_BUFFER_DEPTH =16,
-    parameter integer unsigned FIFO_DEPTH = 8,
-    localparam int unsigned FIFO_PTR_WIDTH = $clog2(FIFO_DEPTH)
+    parameter integer unsigned SRAM_ACCESS_LATENCY =1,
+    parameter integer unsigned SRAM_REQ_PIPE_STAGE = 1,
+    parameter integer unsigned SRAM_RSP_PIPE_STAGE = 1,
+    parameter integer unsigned SIDEBAND_WIDTH = 1,
+    parameter integer unsigned DATA_WIDTH = 128,
+    parameter integer unsigned ADDR_WIDTH = 10,
+    parameter integer unsigned MCP_CYCLE = 1,
+    parameter integer unsigned WRITE_BUFFER_SIZE =16,
+    parameter integer unsigned RW_ARBITER_TYPE =0,  //0 read first,1 write first
+    parameter integer unsigned READ_FORWARD_EN =1,
+    parameter integer unsigned READ_BUFFER_SIZE = 8
+    //parameter integer unsigned MEM_DEPTH = 256,
+    //parameter integer unsigned FIFO_DEPTH = 8,
+    //localparam int unsigned FIFO_PTR_WIDTH = $clog2(FIFO_DEPTH)
 )(
     input  logic                        clk,
     input  logic                        rst_n,
 
     //write req
     input  logic                        write_req_vld,
-    input  mem_fake_write_req_t         write_req_pld,
+    input  logic [DATA_WIDTH-1:0]       write_req_data,
+    input  logic [ADDR_WIDTH-1:0]       write_req_addr,
     output logic                        write_req_rdy,
 
     //read_req
     input  logic                        read_req_vld,
-    input  logic [MEM_ADDR_WIDTH-1:0]   read_req_pld,
+    input  logic [ADDR_WIDTH-1:0]       read_req_addr,
+    input  logic [SIDEBAND_WIDTH-1:0]   read_req_sideband,
     output logic                        read_req_rdy,
 
     //read response
     output logic                        read_resp_vld,
-    output logic [MEM_DATA_WIDTH-1:0]   read_resp_pld,
+    output logic [DATA_WIDTH-1:0]       read_resp_data,
+    output logic [SIDEBAND_WIDTH-1:0]   read_resp_sideband,
     input  logic                        read_resp_rdy,
 
     //mem port
-    output logic [MEM_ADDR_WIDTH-1:0]   addr,
-    output logic [MEM_DATA_WIDTH-1:0]   din,
-    input  logic [MEM_DATA_WIDTH-1:0]   dout,
-    output logic                        en,
-    output logic                        wren,
+    output logic [ADDR_WIDTH-1:0]       spram_addr,
+    input  logic [DATA_WIDTH-1:0]       spram_dout,
+    output logic [DATA_WIDTH-1:0]       spram_din,
+    output logic                        spram_en,
+    output logic                        spram_wren,
 
     //lowpower
     input  logic                        stall,
@@ -39,7 +49,8 @@ module mem_fake_2p_mem
     output logic                        idle
 );
 
-localparam int unsigned FIFO_THRESHOLD = FIFO_DEPTH-1;
+localparam int unsigned FIFO_THRESHOLD  = READ_BUFFER_SIZE-1;
+localparam int unsigned MEM_LATENCY     = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
 
 /*========================================*/
 /*               write buffer             */
@@ -47,89 +58,221 @@ localparam int unsigned FIFO_THRESHOLD = FIFO_DEPTH-1;
 
 logic                        write_buffer_full;
 logic                        write_buffer_empty;
+
 logic                        write_sram_vld;
 logic                        write_sram_rdy;
-mem_fake_write_req_t         write_sram_pld;
+logic [DATA_WIDTH-1:0]       write_sram_data;
+logic [ADDR_WIDTH-1:0]       write_sram_addr;
 
 logic                        read_cmp_vld;
-logic [MEM_ADDR_WIDTH-1:0]   read_cmp_addr;
-logic                        read_cmp_hit;
+logic [ADDR_WIDTH-1:0]       read_cmp_addr;
+logic                        read_cmp_hit_delay;
 
-logic [MEM_DATA_WIDTH-1:0]   read_buffer_data;
-logic                        read_sram_vld;
-logic [MEM_ADDR_WIDTH-1:0]   read_sram_addr;
+logic [DATA_WIDTH-1:0]       read_hit_data_delay;
+
+logic                        read_buffer_idle;
 logic                        read_out_vld;
+logic [DATA_WIDTH-1:0]       read_out_data;
+logic [SIDEBAND_WIDTH-1:0]   read_out_sideband;
 logic                        read_out_rdy;
-logic [MEM_DATA_WIDTH-1:0]   read_out_data;
-logic                        fifo_full;
+
+logic                        read_buffer_full;
+logic                        read_buffer_empty;
 logic                        fifo_almost_full;
 
-mem_fake_write_buffer #(
-    .MEM_DEPTH          (MEM_DEPTH),
-    .MEM_ADDR_WIDTH     (MEM_ADDR_WIDTH),
-    .MEM_DATA_WIDTH     (MEM_DATA_WIDTH),
-    .WRITE_BUFFER_DEPTH (WRITE_BUFFER_DEPTH)
-) u_mem_fake_write_buffer(
-    .clk                    (clk             ),
-    .rst_n                  (rst_n           ),
+logic                        mem_req_vld;
+logic                        mem_req_rdy;
+logic                        mem_req_opcode;
+logic [ADDR_WIDTH-1:0]       mem_req_addr;
+logic [DATA_WIDTH-1:0]       mem_req_data;
+logic [DATA_WIDTH-1:0]       mem_req_bit_en;
+logic [SIDEBAND_WIDTH-1:0]   mem_req_sideband;
 
-    .write_req_vld          (write_req_vld   ),
-    .write_req_pld          (write_req_pld   ),
-    .write_req_rdy          (write_req_rdy   ),
+logic                        mem_rsp_en;
+logic [SIDEBAND_WIDTH-1:0]   mem_rsp_sideband;
+logic [DATA_WIDTH-1:0]       mem_rsp_data;
 
-    .buffer_full            (write_buffer_full  ),
-    .buffer_empty           (write_buffer_empty ),
+logic                                   read_buffer_in_vld;
+logic [DATA_WIDTH+SIDEBAND_WIDTH-1:0]   read_buffer_in_pld;
+logic                                   read_buffer_in_rdy;
 
-    .write_vld              (write_sram_vld       ),
-    .write_rdy              (write_sram_rdy       ),
-    .write_pld              (write_sram_pld       ),
+logic                                   read_buffer_out_vld;
+logic [DATA_WIDTH+SIDEBAND_WIDTH-1:0]   read_buffer_out_pld;
+logic                                   read_buffer_out_rdy;
 
-    .clear                  (clear           ),
-    .stall                  (stall           ),
+generate 
+    if(WRITE_BUFFER_SIZE == 0)begin
+        
+        assign write_sram_vld   = write_req_vld;
+        assign write_sram_data  = write_req_data;
+        assign write_sram_data  = write_req_addr;
+        assign write_req_rdy    = write_sram_rdy;
 
-    .read_cmp_vld           (read_cmp_vld    ),
-    .read_cmp_addr          (read_cmp_addr   ),
-    .read_cmp_hit           (read_cmp_hit    ),
-    .read_buffer_data       (read_buffer_data)
-);
+    end else begin
+        mem_fake_write_buffer #(
+            .ADDR_WIDTH         (ADDR_WIDTH),
+            .DATA_WIDTH         (DATA_WIDTH),
+            .WRITE_BUFFER_SIZE  (WRITE_BUFFER_SIZE),
+            .MEM_LATENCY        (MEM_LATENCY)
+        ) u_mem_fake_write_buffer(
+            .clk                    (clk             ),
+            .rst_n                  (rst_n           ),
 
-assign read_cmp_vld         = read_sram_vld;
-assign read_cmp_addr        = read_sram_addr;
+            .write_req_vld          (write_req_vld   ),
+            .write_req_data         (write_req_data   ),
+            .write_req_addr         (write_req_addr   ),
+            .write_req_rdy          (write_req_rdy   ),
+
+            .buffer_full            (write_buffer_full  ),
+            .buffer_empty           (write_buffer_empty ),
+
+            .write_buffer_vld       (write_sram_vld     ),
+            .write_buffer_rdy       (write_sram_rdy     ),
+            .write_buffer_data      (write_sram_data    ),
+            .write_buffer_addr      (write_sram_addr    ),
+
+            .clear                  (clear           ),
+            .stall                  (stall           ),
+
+            .read_cmp_vld           (read_cmp_vld    ),
+            .read_cmp_addr          (read_cmp_addr   ),
+            .read_cmp_hit_delay     (read_cmp_hit_delay ),
+            .read_hit_data_delay    (read_hit_data_delay)
+    );
+    end
+endgenerate
 
 /*========================================*/
 /*             Read req arbiter           */
 /*========================================*/
 
-//replace by fixed arbiter
+//replace by arbiter
 
-assign read_req_rdy         = ~(fifo_full || write_buffer_full || fifo_almost_full || stall);
-assign read_sram_vld        = read_req_vld && read_req_rdy;
-assign read_sram_addr       = read_req_pld;
+logic [1:0] v_arb_rdy_s;
+logic       arb_read_rdy;
 
-assign addr                 = read_sram_vld ? read_sram_addr : write_sram_pld.write_addr;
-assign din                  = write_sram_pld.write_data;
-assign en                   = read_sram_vld || write_sram_vld;
-assign wren                 = read_sram_vld ? 1'b0 : write_sram_vld;
+//assign arb_read_rdy   = v_arb_rdy_s[0];
+//assign write_sram_rdy = v_arb_rdy_s[1];
+//assign arb_priority   = (RW_ARBITER_TYPE==0) ? {1'b0,1'b1} : {1'b1,1'b0};// 0 read first,1 write first
 
-assign read_out_data        = read_cmp_hit ? read_buffer_data : dout;
+//assign v_arb_vld_s = {write_sram_vld,read_req_vld};
+//assign v_arb_pld_s = {write_sram_addr,read_sram_addr};
 
-always_ff @( posedge clk or negedge rst_n ) begin
-    if(~rst_n)
-        read_out_vld <= 1'b0;
-    else 
-        read_out_vld <= read_sram_vld;
-end
+//cmn_arb_vrp #(
+//    .MODE     (0), // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
+//    .HSK_MODE (0), // 0: Pass 1: 1-Cycle
+//    .WIDTH    (2),
+//    .PRIORITY (arb_priority),
+//    .PLD_WIDTH(ADDR_WIDTH)
+//)u_mem_fake_rw_arbiter(
+//    .clk        (clk    ),
+//    .rst_n      (rst_n  ),
+//    .v_vld_s    ({write_sram_vld,read_req_vld}),
+//    .v_rdy_s    (v_arb_rdy_s),
+//    .v_pld_s    ({write_sram_addr,read_sram_addr}),
+//    .vld_m      (arb_vld_m  ),
+//    .rdy_m      (arb_rdy_m  ),
+//    .pld_m      (arb_pld_m  )
+//);
 
-assign fifo_full        = ~(read_out_rdy);
+//assign read_sram_vld        = read_req_vld;
+//assign read_sram_addr       = read_req_addr;
+
+generate 
+    if(RW_ARBITER_TYPE==1)begin:MEM_FAKE_WRIST_FIRST
+        
+        assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && ~write_sram_vld;
+        assign write_sram_rdy       = mem_req_rdy;
+
+        assign mem_req_addr         = write_sram_vld ? write_sram_addr : read_req_addr;
+        assign mem_req_data         = write_sram_data;
+        assign mem_req_vld          = read_req_vld || write_sram_vld;
+        assign mem_req_opcode       = write_sram_vld ? 1'b1 : 1'b0 ;//wren
+        assign mem_req_sideband     = read_req_sideband;
+        assign mem_req_bit_en       = {(DATA_WIDTH){1'b1}};
+
+    end else begin:MEM_FAKE_READ_FIRST
+
+        assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && mem_req_rdy;
+        assign write_sram_rdy       = ~read_req_vld;
+
+        assign mem_req_addr         = read_req_vld ? read_req_addr : write_sram_addr;
+        assign mem_req_data         = write_sram_data;
+        assign mem_req_vld          = read_req_vld || write_sram_vld;
+        assign mem_req_opcode       = read_req_vld ? 1'b0 : write_sram_vld;//wren
+        assign mem_req_sideband     = read_req_sideband;
+        assign mem_req_bit_en       = {(DATA_WIDTH){1'b1}};
+
+        assign read_cmp_vld         = read_req_vld && read_req_rdy;
+        assign read_cmp_addr        = read_req_addr;
+
+    end
+endgenerate
+
+generate
+    if(WRITE_BUFFER_SIZE == 0) begin
+
+        assign read_out_vld         = mem_rsp_en;
+        assign read_out_data        = mem_rsp_data;
+        assign read_out_sideband    = mem_rsp_sideband;
+
+    end else begin
+
+        assign read_out_vld         = mem_rsp_en;
+        assign read_out_data        = read_cmp_hit_delay ? read_hit_data_delay : mem_rsp_data;
+        assign read_out_sideband    = mem_rsp_sideband;
+
+    end
+endgenerate
+
+/*========================================*/
+/*                ECC decode              */
+/*========================================*/
+
+
+
+/*========================================*/
+/*              Memory Wrapper            */
+/*========================================*/
+
+fcip_mem_ctrl_wrap #(
+        .SRAM_ACCESS_LATENCY(SRAM_ACCESS_LATENCY),
+        .SRAM_REQ_PIPE_STAGE(SRAM_REQ_PIPE_STAGE),
+        .SRAM_RSP_PIPE_STAGE(SRAM_RSP_PIPE_STAGE),
+        .SIDEBAND_WIDTH(SIDEBAND_WIDTH),
+        .DATA_WIDTH(DATA_WIDTH),
+        .ADDR_WIDTH(ADDR_WIDTH),
+        .MCP_CYCLE(MCP_CYCLE)
+    )u_fifo_spram_mem_ctrl(
+        .clk                 (clk             ),
+        .rst_n               (rst_n           ),
+        .mem_req_vld         (mem_req_vld     ),
+        .mem_req_rdy         (mem_req_rdy     ),
+        .mem_req_opcode      (mem_req_opcode  ),
+        .mem_req_addr        (mem_req_addr    ),
+        .mem_req_data        (mem_req_data    ),
+        .mem_req_bit_en      (mem_req_bit_en  ),
+        .mem_req_sideband    (mem_req_sideband),
+
+        .mem_rsp_en          (mem_rsp_en      ),
+        .mem_rsp_sideband    (mem_rsp_sideband),
+        .mem_rsp_data        (mem_rsp_data    ),
+        
+        .spram_addr          (spram_addr      ),
+        .spram_din           (spram_din       ),
+        .spram_dout          (spram_dout      ),
+        .spram_en            (spram_en        ),
+        .spram_wren          (spram_wren      )
+);
 
 /*========================================*/
 /*              Sync fifo                 */
 /*========================================*/
 
 sync_fifo_reg #(
-    .FIFO_DEPTH(FIFO_DEPTH),
-    .FIFO_WIDTH(MEM_DATA_WIDTH),
-    .ALMOST_FULL_THRESHOLD (FIFO_THRESHOLD),
+    .FIFO_DEPTH(READ_BUFFER_SIZE),
+    .FIFO_WIDTH(DATA_WIDTH+SIDEBAND_WIDTH),
+    .ALMOST_FULL_THRESHOLD (READ_BUFFER_SIZE-MEM_LATENCY),
     .ALMOST_EMPTY_THRESHOLD(FIFO_THRESHOLD),
     .FORWARD_EN(0)
 ) u_sync_fifo(
@@ -138,22 +281,50 @@ sync_fifo_reg #(
 
     .stall              (stall),
     .clear              (clear),
-    .idle               (sync_fifo_idle),
+    .idle               (read_buffer_idle),
 
-    .write_req_vld      (read_out_vld ),
-    .write_req_pld      (read_out_data ),
-    .write_req_rdy      (read_out_rdy),
+    .write_req_vld      (read_buffer_in_vld ),
+    .write_req_pld      (read_buffer_in_pld ),
+    .write_req_rdy      (read_buffer_in_rdy),
 
-    .read_resp_vld      (read_resp_vld),
-    .read_resp_pld      (read_resp_pld),
-    .read_resp_rdy      (read_resp_rdy),
+    .read_resp_vld      (read_buffer_out_vld),
+    .read_resp_pld      (read_buffer_out_pld),
+    .read_resp_rdy      (read_buffer_out_rdy),
 
     .almost_full        (fifo_almost_full),
     .almost_empty       (),
-    .empty              (),
-    .full               ()
+    .empty              (read_buffer_empty),
+    .full               (read_buffer_full)
 );
 
-assign idle = sync_fifo_idle && write_buffer_empty;
+generate
+    if(READ_FORWARD_EN)begin
+        
+        assign forward_enable       = read_resp_rdy && read_buffer_empty;
+
+        assign read_buffer_in_vld   = read_out_vld && ~forward_enable;
+        assign read_buffer_in_pld   = {read_out_sideband,read_out_data};
+        assign read_out_rdy         = read_buffer_in_rdy;
+
+        assign read_resp_vld        = forward_enable ? read_out_vld      : read_buffer_out_vld;
+        assign read_resp_data       = forward_enable ? read_out_data     : read_buffer_out_pld[DATA_WIDTH-1:0];
+        assign read_resp_sideband   = forward_enable ? read_out_sideband : read_buffer_out_pld[DATA_WIDTH+SIDEBAND_WIDTH-1 : DATA_WIDTH];
+        assign read_buffer_out_rdy  = read_resp_rdy;
+
+    end else begin
+
+        assign read_buffer_in_vld   = read_out_vld;
+        assign read_buffer_in_pld   = {read_out_sideband,read_out_data};
+        assign read_out_rdy         = read_buffer_in_rdy;
+        
+        assign read_resp_vld        = read_buffer_out_vld;
+        assign read_resp_data       = read_buffer_out_pld[DATA_WIDTH-1:0];
+        assign read_resp_sideband   = read_buffer_out_pld[DATA_WIDTH+SIDEBAND_WIDTH-1 : DATA_WIDTH];
+        assign read_buffer_out_rdy  = read_resp_rdy;
+
+    end
+endgenerate
+
+assign idle             = read_buffer_idle && write_buffer_empty;
 
 endmodule

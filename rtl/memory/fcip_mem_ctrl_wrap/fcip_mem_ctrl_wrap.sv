@@ -32,7 +32,7 @@ module fcip_mem_ctrl_wrap #(
 
 // flow control
 
-localparam integer unsigned MCP_LATENCY= SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
+localparam integer unsigned MCP_LATENCY= SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
 localparam integer unsigned MCP_LATENCY_WIDTH = $clog2(MCP_LATENCY);
 logic [MCP_LATENCY_WIDTH-1:0] mcp_cnt;
 
@@ -41,6 +41,8 @@ assign mem_req_handshake    = mem_req_vld && mem_req_rdy;
 
 always @(posedge clk or negedge rst_n) begin
     if(~rst_n)
+        mcp_cnt <= 'b0;
+    else if(mcp_cnt == MCP_LATENCY)
         mcp_cnt <= 'b0;
     else if(mem_req_handshake)
         mcp_cnt <= mcp_cnt + 1'b1;
