@@ -1,8 +1,8 @@
 module mem_fake_2p_mem 
 #(
-    parameter integer unsigned SRAM_ACCESS_LATENCY =1,
-    parameter integer unsigned SRAM_REQ_PIPE_STAGE = 1,
-    parameter integer unsigned SRAM_RSP_PIPE_STAGE = 1,
+    parameter integer unsigned SRAM_ACCESS_LATENCY = 1,
+    parameter integer unsigned SRAM_REQ_PIPE_STAGE = 0,
+    parameter integer unsigned SRAM_RSP_PIPE_STAGE = 0,
     parameter integer unsigned SIDEBAND_WIDTH = 1,
     parameter integer unsigned DATA_WIDTH = 128,
     parameter integer unsigned ADDR_WIDTH = 10,
@@ -11,9 +11,6 @@ module mem_fake_2p_mem
     parameter integer unsigned RW_ARBITER_TYPE =0,  //0 read first,1 write first
     parameter integer unsigned READ_FORWARD_EN =1,
     parameter integer unsigned READ_BUFFER_SIZE = 8
-    //parameter integer unsigned MEM_DEPTH = 256,
-    //parameter integer unsigned FIFO_DEPTH = 8,
-    //localparam int unsigned FIFO_PTR_WIDTH = $clog2(FIFO_DEPTH)
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -23,6 +20,7 @@ module mem_fake_2p_mem
     input  logic [DATA_WIDTH-1:0]       write_req_data,
     input  logic [ADDR_WIDTH-1:0]       write_req_addr,
     output logic                        write_req_rdy,
+    input  logic [DATA_WIDTH-1:0]       write_req_bit_en,
 
     //read_req
     input  logic                        read_req_vld,
@@ -42,6 +40,7 @@ module mem_fake_2p_mem
     output logic [DATA_WIDTH-1:0]       spram_din,
     output logic                        spram_en,
     output logic                        spram_wren,
+    output logic [DATA_WIDTH -1 : 0]    spram_bit_en,
 
     //lowpower
     input  logic                        stall,
@@ -63,6 +62,7 @@ logic                        write_sram_vld;
 logic                        write_sram_rdy;
 logic [DATA_WIDTH-1:0]       write_sram_data;
 logic [ADDR_WIDTH-1:0]       write_sram_addr;
+logic [DATA_WIDTH-1:0]       write_sram_bit_en;
 
 logic                        read_cmp_vld;
 logic [ADDR_WIDTH-1:0]       read_cmp_addr;
@@ -119,9 +119,10 @@ generate
             .rst_n                  (rst_n           ),
 
             .write_req_vld          (write_req_vld   ),
-            .write_req_data         (write_req_data   ),
-            .write_req_addr         (write_req_addr   ),
+            .write_req_data         (write_req_data  ),
+            .write_req_addr         (write_req_addr  ),
             .write_req_rdy          (write_req_rdy   ),
+            .write_req_bit_en       (write_req_bit_en),
 
             .buffer_full            (write_buffer_full  ),
             .buffer_empty           (write_buffer_empty ),
@@ -130,6 +131,7 @@ generate
             .write_buffer_rdy       (write_sram_rdy     ),
             .write_buffer_data      (write_sram_data    ),
             .write_buffer_addr      (write_sram_addr    ),
+            .write_buffer_bit_en    (write_sram_bit_en  ),
 
             .clear                  (clear           ),
             .stall                  (stall           ),
@@ -146,42 +148,10 @@ endgenerate
 /*             Read req arbiter           */
 /*========================================*/
 
-//replace by arbiter
-
-logic [1:0] v_arb_rdy_s;
-logic       arb_read_rdy;
-
-//assign arb_read_rdy   = v_arb_rdy_s[0];
-//assign write_sram_rdy = v_arb_rdy_s[1];
-//assign arb_priority   = (RW_ARBITER_TYPE==0) ? {1'b0,1'b1} : {1'b1,1'b0};// 0 read first,1 write first
-
-//assign v_arb_vld_s = {write_sram_vld,read_req_vld};
-//assign v_arb_pld_s = {write_sram_addr,read_sram_addr};
-
-//cmn_arb_vrp #(
-//    .MODE     (0), // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
-//    .HSK_MODE (0), // 0: Pass 1: 1-Cycle
-//    .WIDTH    (2),
-//    .PRIORITY (arb_priority),
-//    .PLD_WIDTH(ADDR_WIDTH)
-//)u_mem_fake_rw_arbiter(
-//    .clk        (clk    ),
-//    .rst_n      (rst_n  ),
-//    .v_vld_s    ({write_sram_vld,read_req_vld}),
-//    .v_rdy_s    (v_arb_rdy_s),
-//    .v_pld_s    ({write_sram_addr,read_sram_addr}),
-//    .vld_m      (arb_vld_m  ),
-//    .rdy_m      (arb_rdy_m  ),
-//    .pld_m      (arb_pld_m  )
-//);
-
-//assign read_sram_vld        = read_req_vld;
-//assign read_sram_addr       = read_req_addr;
-
 generate 
     if(RW_ARBITER_TYPE==1)begin:MEM_FAKE_WRIST_FIRST
         
-        assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && ~write_sram_vld;
+        assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && mem_req_rdy && ~write_sram_vld;
         assign write_sram_rdy       = mem_req_rdy;
 
         assign mem_req_addr         = write_sram_vld ? write_sram_addr : read_req_addr;
@@ -189,19 +159,19 @@ generate
         assign mem_req_vld          = read_req_vld || write_sram_vld;
         assign mem_req_opcode       = write_sram_vld ? 1'b1 : 1'b0 ;//wren
         assign mem_req_sideband     = read_req_sideband;
-        assign mem_req_bit_en       = {(DATA_WIDTH){1'b1}};
+        assign mem_req_bit_en       = write_sram_bit_en;
 
     end else begin:MEM_FAKE_READ_FIRST
 
         assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && mem_req_rdy;
-        assign write_sram_rdy       = ~read_req_vld;
+        assign write_sram_rdy       = ~read_req_vld && mem_req_rdy;
 
         assign mem_req_addr         = read_req_vld ? read_req_addr : write_sram_addr;
         assign mem_req_data         = write_sram_data;
         assign mem_req_vld          = read_req_vld || write_sram_vld;
         assign mem_req_opcode       = read_req_vld ? 1'b0 : write_sram_vld;//wren
         assign mem_req_sideband     = read_req_sideband;
-        assign mem_req_bit_en       = {(DATA_WIDTH){1'b1}};
+        assign mem_req_bit_en       = write_sram_bit_en;
 
         assign read_cmp_vld         = read_req_vld && read_req_rdy;
         assign read_cmp_addr        = read_req_addr;
@@ -262,7 +232,8 @@ fcip_mem_ctrl_wrap #(
         .spram_din           (spram_din       ),
         .spram_dout          (spram_dout      ),
         .spram_en            (spram_en        ),
-        .spram_wren          (spram_wren      )
+        .spram_wren          (spram_wren      ),
+        .spram_bit_en        (spram_bit_en    )
 );
 
 /*========================================*/

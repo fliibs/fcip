@@ -12,6 +12,7 @@ module mem_fake_write_buffer
     input  [DATA_WIDTH-1:0]             write_req_data,
     input  [ADDR_WIDTH-1:0]             write_req_addr,
     output logic                        write_req_rdy,
+    input  [DATA_WIDTH-1:0]             write_req_bit_en,
 
     //control
     output logic                        buffer_full,
@@ -21,6 +22,7 @@ module mem_fake_write_buffer
     input  logic                        write_buffer_rdy,
     output logic [DATA_WIDTH-1:0]       write_buffer_data,
     output logic [ADDR_WIDTH-1:0]       write_buffer_addr,
+    output logic [DATA_WIDTH-1:0]       write_buffer_bit_en,
 
     input  logic                        clear,
     input  logic                        stall,
@@ -38,6 +40,7 @@ localparam CNT_WIDTH = $clog2(WRITE_BUFFER_SIZE);
 typedef struct packed {
     logic [DATA_WIDTH-1:0] write_data;
     logic [ADDR_WIDTH-1:0] write_addr;
+    logic [DATA_WIDTH-1:0] write_bit_en;
 } mem_fake_write_req_t;
 
 logic [CNT_WIDTH-1:0]           prealloc_entry;
@@ -54,7 +57,6 @@ logic                           rd_ptr_msb;
 logic                           full;
 logic                           empty;
 
-//logic                           read_cmp_vld_1d;
 logic [WRITE_BUFFER_SIZE-1:0]   cmp_hit_onehot;
 mem_fake_write_req_t            write_array_data_sel;
 logic [WRITE_BUFFER_SIZE-1:0]   mask_en;
@@ -111,8 +113,9 @@ assign empty    = (rd_ptr == wr_ptr);
 /*               Write Entry              */
 /*========================================*/
 
-assign write_req_pld.write_data = write_req_data;
-assign write_req_pld.write_addr = write_req_addr;
+assign write_req_pld.write_bit_en   = write_req_bit_en;
+assign write_req_pld.write_data     = write_req_data;
+assign write_req_pld.write_addr     = write_req_addr;
 
 generate
     for(genvar i=0; i<WRITE_BUFFER_SIZE ; i++ )begin
@@ -145,6 +148,7 @@ endgenerate
 assign write_buffer_vld        = ~empty;
 assign write_buffer_data       = write_array_data[rd_ptr].write_data;
 assign write_buffer_addr       = write_array_data[rd_ptr].write_addr;
+assign write_buffer_bit_en     = write_array_data[rd_ptr].write_bit_en;
 assign rel_write_entry         = ~empty && write_buffer_rdy;
 
 /*========================================*/
@@ -184,28 +188,53 @@ assign read_cmp_hit         = |cmp_hit_onehot;
 assign write_array_data_sel = write_array_data[multi_hit_addr_index];
 assign read_hit_data        = write_array_data_sel.write_data;
 
-fcip_sync_cell #(
-    .DATA_WIDTH  (1),
-    .SYN_STAGE   (MEM_LATENCY), // must upper than 1
-    .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-) u_read_cmp_vld_sync(
-    .clk         (clk  ),
-    .rst_n       (rst_n),
-    .d           (read_cmp_hit),
-    .q           (read_cmp_hit_delay)
-);
+/*========================================*/
+/*                Data pipe               */
+/*========================================*/
 
-fcip_sync_cell #(
-    .DATA_WIDTH  (DATA_WIDTH),
-    .SYN_STAGE   (MEM_LATENCY), // must upper than 1
-    .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-) u_read_hit_data_sync(
-    .clk         (clk  ),
-    .rst_n       (rst_n),
-    .d           (read_hit_data),
-    .q           (read_hit_data_delay)
-);
+generate 
+    if(MEM_LATENCY==1)begin
+        always_ff @(posedge clk or negedge rst_n) begin
+            if (~rst_n) begin
+                read_cmp_hit_delay <= 'b0;
+            end else begin
+                read_cmp_hit_delay <= read_cmp_hit;
+            end
+        end
+        
+        always_ff @(posedge clk or negedge rst_n) begin
+            if (~rst_n) begin
+                read_hit_data_delay <= 'b0;
+            end else begin
+                read_hit_data_delay <= read_hit_data;
+            end
+        end
+
+    end else begin
+        fcip_sync_cell #(
+        .DATA_WIDTH  (1),
+        .SYN_STAGE   (MEM_LATENCY), // must upper than 1
+        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+    ) u_read_cmp_vld_sync(
+        .clk         (clk  ),
+        .rst_n       (rst_n),
+        .d           (read_cmp_hit),
+        .q           (read_cmp_hit_delay)
+    );
+
+    fcip_sync_cell #(
+        .DATA_WIDTH  (DATA_WIDTH),
+        .SYN_STAGE   (MEM_LATENCY), // must upper than 1
+        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+    ) u_read_hit_data_sync(
+        .clk         (clk  ),
+        .rst_n       (rst_n),
+        .d           (read_hit_data),
+        .q           (read_hit_data_delay)
+    );
+    end
+endgenerate
 
 endmodule

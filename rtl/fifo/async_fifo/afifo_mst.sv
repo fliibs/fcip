@@ -41,6 +41,11 @@ logic [FIFO_DEPTH-1:0]      rq2_wptr_sync0;
 logic [FIFO_DEPTH-1:0]      rptr_sync_inner;
 logic [FIFO_DEPTH-1:0]      rptr_async_inner;
 
+logic [FIFO_DEPTH-1:0]      rptr_sync_marker;
+logic [FIFO_DEPTH-1:0]      rptr_async_marker;
+logic [DATA_WIDTH:0]        pld_sync_marker;
+logic [FIFO_DEPTH-1:0]      wptr_async_marker;
+
 /*========================================*/
 /*               read stall               */
 /*========================================*/
@@ -78,11 +83,11 @@ end
 // no fanout rptr_sync pointer for sdc marker
 always_ff @( posedge rclk or negedge rrst_n ) begin
     if(~rrst_n)
-        rptr_sync <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_marker <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(read_clear)
-        rptr_sync <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_marker <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(rinc)
-        rptr_sync <= rptr_sync_nxt;
+        rptr_sync_marker <= rptr_sync_nxt;
 end
 
 //read pointer async for write domain compare
@@ -101,11 +106,11 @@ end
 // no fanout rptr_async pointer for sdc marker
 always_ff @( posedge rclk or negedge rrst_n ) begin
     if(~rrst_n)
-        rptr_async <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
     else if(read_clear)
-        rptr_async <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
     else if(rinc)
-        rptr_async <= rptr_async_nxt;
+        rptr_async_marker <= rptr_async_nxt;
 end
 /*========================================*/
 /*              write ptr sync             */
@@ -135,7 +140,7 @@ fcip_sync_cell #(
 ) rptr_sync_cell(
     .clk         (rclk  ),
     .rst_n       (rrst_n),
-    .d           (wptr_async),
+    .d           (wptr_async_marker),
     .q           (rq2_wptr_sync1)
 );
 
@@ -153,7 +158,7 @@ logic                   reg_slice_vld_r;
 logic [DATA_WIDTH-1:0]  reg_slice_pld_r;
 
 assign read_out_vld         = rinc;
-assign read_out_data        = pld_sync;
+assign read_out_data        = pld_sync_marker;
 assign read_out_rdy         = ~reg_slice_vld_r || read_resp_rdy;
 //assign read_resp_vld        = reg_slice_vld_r;
 //assign read_resp_pld        = reg_slice_pld_r;
@@ -196,9 +201,37 @@ generate
     end
 endgenerate
 
-//assign bubble_en        = ~reg_slice_pld_r[0];
-//assign read_resp_mask   = read_stall || bubble_en;
-//assign read_resp_vld    = reg_slice_vld_r && ~read_resp_mask;
-//assign read_resp_pld    = reg_slice_pld_r[DATA_WIDTH-1:1];
+/*========================================*/
+/*               CDC Marker               */
+/*========================================*/
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) async_rptr_sync_marker(
+    .I  (rptr_sync_marker),
+    .Z  (rptr_sync)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) rd_rptr_async_primary_marker(
+    .I  (rptr_async_marker),
+    .Z  (rptr_async)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(DATA_WIDTH+1)
+) async_pld_sync_marker(
+    .I  (pld_sync),
+    .Z  (pld_sync_marker)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) async_wptr_async_marker(
+    .I  (wptr_async),
+    .Z  (wptr_async_marker)
+);
+
 
 endmodule 

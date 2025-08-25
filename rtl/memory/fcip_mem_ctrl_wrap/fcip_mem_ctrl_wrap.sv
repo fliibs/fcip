@@ -26,27 +26,41 @@ module fcip_mem_ctrl_wrap #(
     output logic [ADDR_WIDTH -1 : 0]    spram_addr,
     output logic [DATA_WIDTH -1 : 0]    spram_din,
     input  logic [DATA_WIDTH -1 : 0]    spram_dout,
+    output logic [DATA_WIDTH -1 : 0]    spram_bit_en,
     output logic                        spram_en,
     output logic                        spram_wren
 );
 
+logic mem_req_handshake;
+logic ram_read_en;
+
 // flow control
 
-localparam integer unsigned MCP_LATENCY= SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
-localparam integer unsigned MCP_LATENCY_WIDTH = $clog2(MCP_LATENCY);
-logic [MCP_LATENCY_WIDTH-1:0] mcp_cnt;
+localparam integer unsigned DATA_PIPE_LATENCY = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE +SRAM_RSP_PIPE_STAGE;
+localparam integer unsigned MCP_LATENCY_WIDTH = $clog2(MCP_CYCLE);
 
-assign mem_req_rdy          = (mcp_cnt == 0);
-assign mem_req_handshake    = mem_req_vld && mem_req_rdy;
+generate 
+    if(MCP_CYCLE==1)begin
+        
+        assign mem_req_rdy = 1'b1;
+        assign mem_req_handshake    = mem_req_vld && mem_req_rdy;
 
-always @(posedge clk or negedge rst_n) begin
-    if(~rst_n)
-        mcp_cnt <= 'b0;
-    else if(mcp_cnt == MCP_LATENCY)
-        mcp_cnt <= 'b0;
-    else if(mem_req_handshake)
-        mcp_cnt <= mcp_cnt + 1'b1;
-end
+    end else begin
+        logic [MCP_LATENCY_WIDTH-1:0] mcp_cnt;
+
+        assign mem_req_rdy          = (mcp_cnt == 0);
+        assign mem_req_handshake    = mem_req_vld && mem_req_rdy;
+
+        always @(posedge clk or negedge rst_n) begin
+            if(~rst_n)
+                mcp_cnt <= 'b0;
+            else if(mcp_cnt == (MCP_CYCLE-1))
+                mcp_cnt <= 'b0;
+            else if(mem_req_handshake)
+                mcp_cnt <= mcp_cnt + 1'b1;
+        end
+    end
+endgenerate
 
 //memory_wrap
 
@@ -54,6 +68,7 @@ assign spram_addr   = mem_req_addr;
 assign spram_din    = mem_req_data;
 assign spram_en     = mem_req_handshake;
 assign spram_wren   = mem_req_opcode==1;
+assign spram_bit_en = (mem_req_opcode==1) ? mem_req_bit_en : {(DATA_WIDTH){1'b1}};
 
 //sram_marker
 
@@ -66,32 +81,54 @@ fcip_marker #(
 
 //resp en/sideband pipeline
 
-logic ram_read_en;
-
 assign ram_read_en = mem_req_handshake && (mem_req_opcode==0);
 
-fcip_sync_cell #(
-    .DATA_WIDTH  (1),
-    .SYN_STAGE   (MCP_LATENCY), // must upper than 1
-    .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-) u_sram_read_en_sync(
-    .clk         (clk  ),
-    .rst_n       (rst_n),
-    .d           (ram_read_en),
-    .q           (mem_rsp_en)
-);
+generate
+    if(DATA_PIPE_LATENCY==1)begin
+        
+        always_ff @(posedge clk or negedge rst_n) begin
+            if (~rst_n) begin
+                mem_rsp_en <= 'b0;
+            end else begin
+                mem_rsp_en <= ram_read_en;
+            end
+        end
 
-fcip_sync_cell #(
-    .DATA_WIDTH  (SIDEBAND_WIDTH),
-    .SYN_STAGE   (MCP_LATENCY), // must upper than 1
-    .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-) u_sram_sideband_sync(
-    .clk         (clk  ),
-    .rst_n       (rst_n),
-    .d           (mem_req_sideband),
-    .q           (mem_rsp_sideband)
-);
+        always_ff @(posedge clk or negedge rst_n) begin
+            if (~rst_n) begin
+                mem_rsp_sideband <= 'b0;
+            end else begin
+                mem_rsp_sideband <= mem_req_sideband;
+            end
+        end
+
+    end else begin
+        fcip_sync_cell #(
+        .DATA_WIDTH  (1),
+        .SYN_STAGE   (DATA_PIPE_LATENCY), // must upper than 1
+        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+    ) u_sram_read_en_sync(
+        .clk         (clk  ),
+        .rst_n       (rst_n),
+        .d           (ram_read_en),
+        .q           (mem_rsp_en)
+    );
+
+    fcip_sync_cell #(
+        .DATA_WIDTH  (SIDEBAND_WIDTH),
+        .SYN_STAGE   (DATA_PIPE_LATENCY), // must upper than 1
+        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+    ) u_sram_sideband_sync(
+        .clk         (clk  ),
+        .rst_n       (rst_n),
+        .d           (mem_req_sideband),
+        .q           (mem_rsp_sideband)
+    );
+
+    end
+endgenerate
+
 
 endmodule

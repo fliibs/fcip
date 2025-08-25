@@ -47,6 +47,11 @@ logic                   bubble_req_vld;
 logic [DATA_WIDTH:0]    bubble_req_pld;
 logic                   bubble_gen_rdy;
 
+logic [FIFO_DEPTH-1:0]  rptr_sync_marker;
+logic [FIFO_DEPTH-1:0]  rptr_async_marker;
+logic [DATA_WIDTH:0]    pld_sync_marker;
+logic [FIFO_DEPTH-1:0]  wptr_async_marker;
+
 /*========================================*/
 /*               Bubble Gen               */
 /*========================================*/
@@ -131,11 +136,11 @@ end
 // no fanout wptr_async pointer for sdc marker
 always_ff @( posedge wclk or negedge wrst_n ) begin
     if(~wrst_n)
-        wptr_async <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
     else if(write_clear)
-        wptr_async <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
     else if(winc)
-        wptr_async <= wptr_async_nxt;
+        wptr_async_marker <= wptr_async_nxt;
 end
 
 /*========================================*/
@@ -162,7 +167,7 @@ fcip_sync_cell #(
 ) rptr_sync_cell(
     .clk         (wclk  ),
     .rst_n       (wrst_n),
-    .d           (rptr_async),
+    .d           (rptr_async_marker),
     .q           (wq2_rptr_sync1)
 );
 
@@ -196,7 +201,7 @@ logic [FIFO_DEPTH-1:0]  pld_mux_rev         [DATA_WIDTH:0];
 logic [FIFO_DEPTH-1:0]  pld_mux_rev_select  [DATA_WIDTH:0]; 
 logic [DATA_WIDTH:0]    pld_mux_select;
 
-assign select_onehot = rptr_sync;
+assign select_onehot = rptr_sync_marker;
 
 genvar i,j;
 generate
@@ -221,6 +226,38 @@ generate
     end 
 endgenerate
 
-assign pld_sync = pld_mux_select;
+assign pld_sync_marker = pld_mux_select;
+
+/*========================================*/
+/*               CDC Marker               */
+/*========================================*/
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) async_rptr_sync_marker(
+    .I  (rptr_sync),
+    .Z  (rptr_sync_marker)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) wr_rptr_async_primary_marker(
+    .I  (rptr_async),
+    .Z  (rptr_async_marker)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(DATA_WIDTH+1)
+) async_pld_sync_marker(
+    .I  (pld_sync_marker),
+    .Z  (pld_sync)
+);
+
+fcip_marker #(
+    .DATA_WIDTH(FIFO_DEPTH)
+) async_wptr_async_marker(
+    .I  (wptr_async_marker),
+    .Z  (wptr_async)
+);
 
 endmodule
