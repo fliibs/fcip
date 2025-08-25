@@ -17,11 +17,6 @@ module sfifo_spram_ptr_ctrl #(
     output  logic                       ram_ctrl_empty,
     output  logic                       ram_ctrl_full,
 
-    //output logic [ADDR_WIDTH -1 : 0]    spram_addr,
-    //output logic [DATA_WIDTH -1 : 0]    spram_din,
-    //output logic                        spram_en,
-    //output logic                        spram_wren,
-
     output  logic                       mem_req_vld,
     input   logic                       mem_req_rdy,
     output  logic                       mem_req_opcode,

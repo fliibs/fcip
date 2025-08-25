@@ -11,9 +11,9 @@ module sfifo_spram_ctrl #(
     input   logic                       clk,
     input   logic                       rst_n,
 
-    input   logic                       ram_write_vld,
-    input   logic [DATA_WIDTH-1:0]      ram_write_pld,
-    output  logic                       ram_write_rdy,
+    input   logic                       write_vld,
+    input   logic [DATA_WIDTH-1:0]      write_pld,
+    output  logic                       write_rdy,
     
     output  logic                       ram_read_en,
     output  logic [SRAM_GROUP_NUM-1:0]  ram_read_sel,
@@ -26,10 +26,6 @@ module sfifo_spram_ctrl #(
     input   logic                       rob_empty,
     input   logic                       rob_full,
 
-    //output  logic [ADDR_WIDTH -1 : 0]   spram_addr[SRAM_GROUP_NUM-1:0],
-    //output  logic [DATA_WIDTH -1 : 0]   spram_din[SRAM_GROUP_NUM-1:0],
-    //output  logic [SRAM_GROUP_NUM-1:0]  spram_en,
-    //output  logic [SRAM_GROUP_NUM-1:0]  spram_wren
     output logic [SRAM_GROUP_NUM-1:0]   mem_req_vld,
     input  logic [SRAM_GROUP_NUM-1:0]   mem_req_rdy,
     output logic [SRAM_GROUP_NUM-1:0]   mem_req_opcode,
@@ -47,6 +43,13 @@ logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_read_rdy;
 logic                       ptr_ctrl_empty[SRAM_GROUP_NUM-1:0];
 logic                       ptr_ctrl_full[SRAM_GROUP_NUM-1:0];
 
+logic                       lut_req_vld;
+logic [SRAM_GROUP_NUM-1:0]  lut_req_pld;
+logic                       lut_req_rdy;
+logic                       lut_resp_vld;
+logic [SRAM_GROUP_NUM-1:0]  lut_resp_pld;
+logic                       lut_resp_rdy;
+
 /*========================================*/
 /*             sram write alloc           */
 /*========================================*/
@@ -57,13 +60,15 @@ logic [SRAM_GROUP_NUM-1:0]      sram_write_alloc;
 generate
     for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin
         
+        assign ptr_ctrl_read_vld[i]     = lut_resp_pld[i] && lut_resp_vld && lut_resp_rdy;
         assign sram_write_rdy[i]        = ptr_ctrl_write_rdy[i] && ~ptr_ctrl_read_vld[i];
-        assign ptr_ctrl_write_vld[i]    = sram_write_alloc[i] && ram_write_vld;
+        assign ptr_ctrl_write_vld[i]    = sram_write_alloc[i] && write_vld;
 
     end
 endgenerate
 
-assign ptr_ctrl_write_pld = ram_write_pld;
+assign write_rdy          = ~spram_ctrl_full;
+assign ptr_ctrl_write_pld = write_pld;
 
 cmn_grant_gen_rr #(
     .WIDTH(SRAM_GROUP_NUM)
@@ -89,30 +94,25 @@ generate
             .DATA_WIDTH          (DATA_WIDTH),
             .SIDEBAND_WIDTH      (SIDEBAND_WIDTH)
         ) u_spram_ptr_ctrl(
-            .clk            (clk           ),
-            .rst_n          (rst_n         ),
-            .write_vld      (ptr_ctrl_write_vld[i]     ),
-            .write_pld      (ptr_ctrl_write_pld        ),
-            .write_rdy      (ptr_ctrl_write_rdy[i]     ),
+            .clk            (clk                    ),
+            .rst_n          (rst_n                  ),
+            .write_vld      (ptr_ctrl_write_vld[i]  ),
+            .write_pld      (ptr_ctrl_write_pld     ),
+            .write_rdy      (ptr_ctrl_write_rdy[i]  ),
 
-            .read_vld       (ptr_ctrl_read_vld[i]      ),
-            .read_rdy       (ptr_ctrl_read_rdy[i]      ),
+            .read_vld       (ptr_ctrl_read_vld[i]   ),
+            .read_rdy       (ptr_ctrl_read_rdy[i]   ),
 
-            .ram_ctrl_empty (ptr_ctrl_empty[i]),
-            .ram_ctrl_full  (ptr_ctrl_full[i] ),
+            .ram_ctrl_empty (ptr_ctrl_empty[i]      ),//unused
+            .ram_ctrl_full  (ptr_ctrl_full[i]       ),//unused
 
-            //.spram_addr     (spram_addr[i]    ),
-            //.spram_din      (spram_din[i]     ),
-            //.spram_en       (spram_en[i]      ),
-            //.spram_wren     (spram_wren[i]    ),
-
-            .mem_req_vld     (mem_req_vld[i]  ),
-            .mem_req_rdy     (mem_req_rdy[i]  ),
-            .mem_req_opcode  (mem_req_opcode[i]  ),
-            .mem_req_addr    (mem_req_addr[i]    ),
-            .mem_req_data    (mem_req_data[i]    ),
-            .mem_req_bit_en  (mem_req_bit_en[i]  ),
-            .mem_req_sideband(mem_req_sideband[i])
+            .mem_req_vld     (mem_req_vld[i]        ),
+            .mem_req_rdy     (mem_req_rdy[i]        ),
+            .mem_req_opcode  (mem_req_opcode[i]     ),
+            .mem_req_addr    (mem_req_addr[i]       ),
+            .mem_req_data    (mem_req_data[i]       ),
+            .mem_req_bit_en  (mem_req_bit_en[i]     ),
+            .mem_req_sideband(mem_req_sideband[i]   )
         );
 
         assign spram_ctrl_write_handshake[i] = ptr_ctrl_write_vld[i] && ptr_ctrl_write_rdy[i];
@@ -124,13 +124,6 @@ endgenerate
 /*                  LUT                   */
 /*========================================*/
 localparam  integer unsigned LUT_DEPTH = FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM;
-
-logic                       lut_req_vld;
-logic [SRAM_GROUP_NUM-1:0]  lut_req_pld;
-logic                       lut_req_rdy;
-logic                       lut_resp_vld;
-logic [SRAM_GROUP_NUM-1:0]  lut_resp_pld;
-logic                       lut_resp_rdy;
 
 sync_fifo_reg #(
     .FIFO_DEPTH(LUT_DEPTH),
@@ -151,6 +144,7 @@ sync_fifo_reg #(
     .read_resp_vld  (lut_resp_vld),
     .read_resp_pld  (lut_resp_pld),
     .read_resp_rdy  (lut_resp_rdy),
+
     .almost_full    (spram_ctrl_almost_full),
     .almost_empty   (spram_ctrl_almost_empty),
     .empty          (ram_lut_empty),
@@ -159,12 +153,12 @@ sync_fifo_reg #(
 
 assign lut_req_pld  = spram_ctrl_write_handshake;
 assign lut_req_vld  = |spram_ctrl_write_handshake;
-assign lut_full     = ~lut_req_rdy;
+assign lut_full     = ram_lut_full;
 
-assign lut_resp_rdy         = ~rob_full; //TODO
-assign ptr_ctrl_read_vld    = lut_resp_pld & {SRAM_GROUP_NUM{lut_resp_vld}};
+assign lut_resp_rdy = ~rob_full && (|ptr_ctrl_read_rdy); //TODO
 
 assign spram_ctrl_empty     = ~(|ptr_ctrl_read_rdy) || ram_lut_empty;
+assign spram_ctrl_full      = ram_lut_full;
 
 /*========================================*/
 /*           read delay control           */

@@ -105,7 +105,7 @@ generate
         
         assign write_sram_vld   = write_req_vld;
         assign write_sram_data  = write_req_data;
-        assign write_sram_data  = write_req_addr;
+        assign write_sram_addr  = write_req_addr;
         assign write_req_rdy    = write_sram_rdy;
 
     end else begin
