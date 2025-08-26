@@ -13,6 +13,7 @@ module sfifo_spram_ptr_ctrl #(
     
     input   logic                       read_vld,
     output  logic                       read_rdy,
+    input   logic [SIDEBAND_WIDTH-1:0]  read_sideband,                       
 
     output  logic                       ram_ctrl_empty,
     output  logic                       ram_ctrl_full,
@@ -48,17 +49,12 @@ assign rinc     = read_vld && read_rdy;
 /*               sram ctrl                */
 /*========================================*/
 
-//assign spram_addr   = wptr;
-//assign spram_din    = write_pld;
-//assign spram_en     = rinc || winc;
-//assign spram_wren   = winc;
-
 assign mem_req_vld      = rinc || winc;     
 assign mem_req_opcode   = winc ? 1'b1 : 1'b0;  
 assign mem_req_addr     = wptr;    
 assign mem_req_data     = write_pld;    
 assign mem_req_bit_en   = {DATA_WIDTH{1'b1}};
-assign mem_req_sideband = {SIDEBAND_WIDTH{1'b0}};
+assign mem_req_sideband = read_sideband;
 
 /*========================================*/
 /*               rptr/wptr                */

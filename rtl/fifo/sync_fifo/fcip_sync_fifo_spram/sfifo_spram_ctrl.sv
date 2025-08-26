@@ -15,16 +15,17 @@ module sfifo_spram_ctrl #(
     input   logic [DATA_WIDTH-1:0]      write_pld,
     output  logic                       write_rdy,
     
-    output  logic                       ram_read_en,
-    output  logic [SRAM_GROUP_NUM-1:0]  ram_read_sel,
+    output  logic                       sram_read_en,
+    output  logic [SRAM_GROUP_NUM-1:0]  sram_read_sel,
+    input   logic [SIDEBAND_WIDTH-1:0]  sram_pre_alloc_id,
 
     output  logic                       spram_ctrl_empty,
     output  logic                       spram_ctrl_full,
     output  logic                       spram_ctrl_almost_full,
     output  logic                       spram_ctrl_almost_empty,
 
-    input   logic                       rob_empty,
-    input   logic                       rob_full,
+    input   logic                       rob_almost_empty,
+    input   logic                       rob_almost_full,
 
     output logic [SRAM_GROUP_NUM-1:0]   mem_req_vld,
     input  logic [SRAM_GROUP_NUM-1:0]   mem_req_rdy,
@@ -60,7 +61,7 @@ logic [SRAM_GROUP_NUM-1:0]      sram_write_alloc;
 generate
     for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin
         
-        assign ptr_ctrl_read_vld[i]     = lut_resp_pld[i] && lut_resp_vld && lut_resp_rdy;
+        assign ptr_ctrl_read_vld[i]     = lut_resp_pld[i] && sram_read_en;
         assign sram_write_rdy[i]        = ptr_ctrl_write_rdy[i] && ~ptr_ctrl_read_vld[i];
         assign ptr_ctrl_write_vld[i]    = sram_write_alloc[i] && write_vld;
 
@@ -102,6 +103,7 @@ generate
 
             .read_vld       (ptr_ctrl_read_vld[i]   ),
             .read_rdy       (ptr_ctrl_read_rdy[i]   ),
+            .read_sideband  (sram_pre_alloc_id       ),
 
             .ram_ctrl_empty (ptr_ctrl_empty[i]      ),//unused
             .ram_ctrl_full  (ptr_ctrl_full[i]       ),//unused
@@ -155,7 +157,7 @@ assign lut_req_pld  = spram_ctrl_write_handshake;
 assign lut_req_vld  = |spram_ctrl_write_handshake;
 assign lut_full     = ram_lut_full;
 
-assign lut_resp_rdy = ~rob_full && (|ptr_ctrl_read_rdy); //TODO
+assign lut_resp_rdy = ~rob_almost_full && (|ptr_ctrl_read_rdy); //TODO
 
 assign spram_ctrl_empty     = ~(|ptr_ctrl_read_rdy) || ram_lut_empty;
 assign spram_ctrl_full      = ram_lut_full;
@@ -164,7 +166,7 @@ assign spram_ctrl_full      = ram_lut_full;
 /*           read delay control           */
 /*========================================*/
 
-assign ram_read_en          = lut_resp_vld && lut_resp_rdy;
-assign ram_read_sel         = lut_resp_pld;
+assign sram_read_en          = lut_resp_vld && lut_resp_rdy;
+assign sram_read_sel         = lut_resp_pld;
 
 endmodule
