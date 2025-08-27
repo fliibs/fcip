@@ -22,6 +22,7 @@
 | WRITE_BUFFER_SIZE | 0 | >= 0 | Write Buffer大小，定义为0时即不启用Write Buffer|
 | RW_ARBITER_TYPE | 0 | 0 or 1 | 读写仲裁器类型，0为读优先仲裁，1为写优先仲裁|
 | READ_FORWARD_EN | 0 | 1 or 0 | 决定是否启用forwarding，在启用时，Read Buffer延迟为0，否则为1|
+| READ_BUFFER_SIZE| 2 | >= SRAM_ACCESS_LATENCY+SRAM_REQ_PIPE_STAGE+SRAM_RSP_PIPE_STAGE|
 
 这里面有很多个参数用来在timing和latency之间进行平衡：
 
