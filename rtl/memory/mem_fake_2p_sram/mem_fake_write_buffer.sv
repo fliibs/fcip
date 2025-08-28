@@ -260,7 +260,8 @@ generate
         end
 
     end else begin
-        fcip_sync_cell #(
+    
+    fcip_sync_cell #(
         .DATA_WIDTH  (1),
         .SYN_STAGE   (MEM_LATENCY), // must upper than 1
         .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL

@@ -63,7 +63,7 @@ LUT就是一个不带fowrading逻辑的基于reg的同步FIFO，用来记录每�
 
 | Parameter | Default Value | Constraint | Description |
 | --- | --- | --- | --- |
-| FIFO_DEPTH_PER_GROUP | 128 | >=4 | 建议深度不要少于32，少于64应当采用Reg方案|
+| FIFO_DEPTH_PER_GROUP | 128 | >=4 | SRAM深度，建议深度不要少于32，少于64应当采用Reg方案|
 | SRAM_GROUP_NUM | 1 | >=1 | SRAM组数，在MCP=1时至少为2，以满带宽读写|
 | DATA_WIDTH | 1 | >=1 | 定义数据宽度|
 | ALMOST_FULL_THRESHOLD | 0 | >=0 | 这个阈值X，代表距离真正的full还有X时，almost_full就会拉高|

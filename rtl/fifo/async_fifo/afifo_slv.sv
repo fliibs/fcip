@@ -147,18 +147,6 @@ end
 /*              read ptr sync             */
 /*========================================*/
 
-//replace  sync std_cell
-
-//always_ff @( posedge wclk or negedge wrst_n ) begin
-//    if(~wrst_n)begin
-//        wq2_rptr_sync0 <= {{(FIFO_DEPTH){1'b0}}};
-//        wq2_rptr_sync1 <= {{(FIFO_DEPTH){1'b0}}};
-//    end else begin
-//        wq2_rptr_sync0 <= rptr_async;
-//        wq2_rptr_sync1 <= wq2_rptr_sync0;
-//    end
-//end
-
 fcip_sync_cell #(
     .DATA_WIDTH  (FIFO_DEPTH),
     .SYN_STAGE   (SYNC_STAGE), // must upper than 1

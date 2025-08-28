@@ -54,17 +54,25 @@ generate
     if(FORWARD_EN==1)begin
 
         logic entry_read_vld;
+        logic direct_forward_en;
+        logic sram_forward_en;
+        logic rob_forward_en;
         
-        assign read_forward_en  = rob_empty && read_rdy;
+        assign direct_forward_en= rob_empty && read_rdy;
+        assign sram_forward_en  = ram_req_rdy && read_rdy && (ram_req_id==rob_rptr);
+        assign rob_forward_en   = direct_forward_en || sram_forward_en;
+
+        assign rob_forward_vld  = ram_req_vld || rob_req_vld;
+        assign rob_forward_pld  = direct_forward_en ? rob_req_pld : ram_req_pld;
         assign entry_read_vld   = ~rob_empty && array_vld[rob_rptr];
 
         //out response
-        assign read_vld         = read_forward_en ? rob_req_vld : entry_read_vld;
-        assign read_pld         = read_forward_en ? rob_req_pld : array_data[rob_rptr];
+        assign read_vld         = rob_forward_en ? rob_forward_vld : entry_read_vld;
+        assign read_pld         = rob_forward_en ? rob_forward_pld : array_data[rob_rptr];
 
         //rob entry ptr inc
-        assign rob_winc         = rob_req_vld && rob_req_rdy && ~read_forward_en;
-        assign rinc             = entry_read_vld && read_rdy;
+        assign rob_winc         = rob_req_vld && rob_req_rdy && ~direct_forward_en;
+        assign rinc             = (entry_read_vld && read_rdy) || (sram_forward_en && ram_req_vld);
 
     end else begin
 

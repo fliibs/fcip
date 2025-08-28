@@ -116,22 +116,6 @@ end
 /*              write ptr sync             */
 /*========================================*/
 
-//replace  sync std_cell
-
-//always_ff @( posedge rclk or negedge rrst_n ) begin
-//    if(~rrst_n)begin
-//        rq2_wptr_sync0 <= {{(FIFO_DEPTH){1'b0}}};
-//        rq2_wptr_sync1 <= {{(FIFO_DEPTH){1'b0}}};
-//    end else if(read_clear)begin
-//        rq2_wptr_sync0 <= {{(FIFO_DEPTH){1'b0}}};
-//        rq2_wptr_sync1 <= {{(FIFO_DEPTH){1'b0}}};
-//    end
-//    else begin
-//        rq2_wptr_sync0 <= wptr_async;
-//        rq2_wptr_sync1 <= rq2_wptr_sync0;
-//    end
-//end
-
 fcip_sync_cell #(
     .DATA_WIDTH  (FIFO_DEPTH),
     .SYN_STAGE   (SYNC_STAGE), // must upper than 1
@@ -160,8 +144,6 @@ logic [DATA_WIDTH-1:0]  reg_slice_pld_r;
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
 assign read_out_rdy         = ~reg_slice_vld_r || read_resp_rdy;
-//assign read_resp_vld        = reg_slice_vld_r;
-//assign read_resp_pld        = reg_slice_pld_r;
 
 always_ff @( posedge rclk or negedge rrst_n ) begin
     if(~rrst_n)
