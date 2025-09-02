@@ -6,11 +6,12 @@
 //
 //================================================================
 
--f $FCIP_DIR/ip/arbiter/vc/filelist.f
--f $FCIP_DIR/ip/async_fifo/vc/filelist.f
--f $FCIP_DIR/ip/basic/vc/filelist.f
--f $FCIP_DIR/ip/mem_model/vc/filelist.f
--f $FCIP_DIR/ip/memory/vc/filelist.f
--f $FCIP_DIR/ip/regslice/vc/filelist.f
--f $FCIP_DIR/ip/stdcell_wrap/vc/filelist.f
--f $FCIP_DIR/ip/sync_fifo/vc/filelist.f
+-f $FCIP_DIR/vc/arbiter.f
+-f $FCIP_DIR/vc/async_fifo.f
+-f $FCIP_DIR/vc/basic.f
+-f $FCIP_DIR/vc/mem_model.f
+-f $FCIP_DIR/vc/memory.f
+-f $FCIP_DIR/vc/regslice.f
+-f $FCIP_DIR/vc/stdcell_wrap.f
+-f $FCIP_DIR/vc/sync_fifo.f
+
