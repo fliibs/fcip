@@ -308,7 +308,7 @@ fcip_real_mux_onehot #(
     .select_pld     (mem_data_sel)
 );
 
-cmn_real_mux_onehot #(
+fcip_real_mux_onehot #(
     .WIDTH     (SRAM_GROUP_NUM),
     .PLD_WIDTH (MEM_SIDEBAND_WIDTH)
 )u_sram_sideband_mux(
