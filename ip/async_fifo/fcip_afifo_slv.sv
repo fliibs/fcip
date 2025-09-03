@@ -147,6 +147,7 @@ end
 /*              read ptr sync             */
 /*========================================*/
 
+<<<<<<< HEAD:ip/async_fifo/fcip_afifo_slv.sv
 //replace  sync std_cell
 
 //always_ff @( posedge clk or negedge rst_n ) begin
@@ -159,6 +160,8 @@ end
 //    end
 //end
 
+=======
+>>>>>>> upstream/new:rtl/fifo/async_fifo/afifo_slv.sv
 fcip_sync_cell #(
     .DATA_WIDTH  (FIFO_DEPTH),
     .SYN_STAGE   (SYNC_STAGE), // must upper than 1

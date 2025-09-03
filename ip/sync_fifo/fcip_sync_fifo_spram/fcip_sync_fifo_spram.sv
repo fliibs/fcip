@@ -5,8 +5,7 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
     parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
     parameter  integer unsigned FORWARD_EN = 1,
-    parameter  integer unsigned ROB_DEPTH = 16, 
-    parameter  integer unsigned MEM_SIDEBAND_WIDTH =1,
+    parameter  integer unsigned ROB_DEPTH = 16, //ROB DEPTH should be larger than MEM DATA PIPE Latency
     //for memory crl wrapper
     parameter  integer unsigned SRAM_ACCESS_LATENCY  = 1,
     parameter  integer unsigned SRAM_REQ_PIPE_STAGE = 0,
@@ -46,35 +45,49 @@ module fcip_sync_fifo_spram #(
     output logic [DATA_WIDTH -1 : 0]   spram_bit_en[SRAM_GROUP_NUM-1:0]
 );
 
-localparam int unsigned ROB_PTR_WIDTH = $clog2(ROB_DEPTH);
+localparam int unsigned ROB_PTR_WIDTH               = $clog2(ROB_DEPTH);
+localparam int unsigned SRAM_DELAY_TOTAL            = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
+localparam int unsigned ROB_ALMOST_FULL_THRESHOLD   = ROB_DEPTH - SRAM_DELAY_TOTAL;
+localparam int unsigned MEM_SIDEBAND_WIDTH          = ROB_PTR_WIDTH;
 
-logic                       sram_empty;
-logic                       rob_write_vld;
-logic [DATA_WIDTH-1:0]      rob_write_pld;
-logic                       rob_write_rdy;
-logic [ROB_PTR_WIDTH-1:0]   rob_prealloc_id;
-logic                       ram_req_vld;
-logic [DATA_WIDTH-1:0]      ram_req_pld;
-logic                       ram_req_rdy;
-logic                       read_vld;
-logic [DATA_WIDTH-1:0]      read_pld;
-logic                       read_rdy;
-logic                       rob_empty;
-logic                       rob_full;
-logic                       sram_pre_winc;
+logic                           sram_empty;
+logic                           rob_write_vld;
+logic [DATA_WIDTH-1:0]          rob_write_pld;
+logic                           rob_write_rdy;
+logic [ROB_PTR_WIDTH-1:0]       rob_prealloc_id;
+logic [ROB_PTR_WIDTH-1:0]       sram_pre_alloc_id;
+logic                           sram_req_vld;
+logic [DATA_WIDTH-1:0]          sram_req_pld;
+logic                           sram_req_rdy;
+logic [ROB_PTR_WIDTH-1:0]       sram_req_id;
+logic                           read_vld;
+logic [DATA_WIDTH-1:0]          read_pld;
+logic                           read_rdy;
+logic                           rob_almost_empty;
+logic                           rob_almost_full;
+logic                           sram_pre_winc;
 
-logic   spram_ctrl_empty;
-logic   spram_ctrl_full;
-logic   sel_ram_en;
-logic   sel_rob_en;
-logic   rob_forward_en;
-logic   spram_ctrl_almost_full;
-logic   spram_ctrl_almost_empty;
+logic                           spram_ctrl_empty;
+logic                           spram_ctrl_full;
+logic                           sel_ram_en;
+logic                           sel_rob_en;
+logic                           rob_forward_en;
+logic                           spram_ctrl_almost_full;
+logic                           spram_ctrl_almost_empty;
 
+logic                           ram_write_vld;
+logic [DATA_WIDTH-1:0]          ram_write_pld;
+logic                           ram_write_rdy;
 
-logic                   ram_write_vld;
-logic [DATA_WIDTH-1:0]  ram_write_pld;
-logic                   ram_write_rdy;
+logic                           sram_read_en;
+logic [SRAM_GROUP_NUM-1:0]      sram_read_sel;
+logic [SRAM_GROUP_NUM-1:0]      mem_req_vld;
+logic [SRAM_GROUP_NUM-1:0]      mem_req_rdy;
+logic [SRAM_GROUP_NUM-1:0]      mem_req_opcode;
+logic [ADDR_WIDTH-1:0]          mem_req_addr[SRAM_GROUP_NUM-1:0];
+logic [DATA_WIDTH-1:0]          mem_req_data[SRAM_GROUP_NUM-1:0];
+logic [DATA_WIDTH-1:0]          mem_req_bit_en[SRAM_GROUP_NUM-1:0];
+logic [MEM_SIDEBAND_WIDTH-1:0]  mem_req_sideband[SRAM_GROUP_NUM-1:0];
 
 assign empty        = spram_ctrl_empty;
 assign full         = spram_ctrl_full;
@@ -82,15 +95,15 @@ assign almost_full  = spram_ctrl_almost_full;
 assign almost_empty = spram_ctrl_almost_empty;
 
 /*========================================*/
-/*                 Decode                 */
+/*               write arbiter            */
 /*========================================*/
 
-assign write_req_rdy    = ram_write_rdy;
+assign write_req_rdy    = sel_rob_en || sel_ram_en;
 
-assign rob_forward_en   = (FORWARD_EN==1) && rob_empty && spram_ctrl_empty;
+//assign rob_forward_en   = rob_write_rdy && spram_ctrl_empty;
 
-assign sel_ram_en       = ram_write_rdy && ~rob_forward_en;
-assign sel_rob_en       = rob_forward_en;
+assign sel_rob_en       = rob_write_rdy && spram_ctrl_empty;
+assign sel_ram_en       = ram_write_rdy && ~sel_rob_en;
 
 assign ram_write_vld    = write_req_vld && sel_ram_en;
 assign ram_write_pld    = write_req_pld;
@@ -100,23 +113,13 @@ assign rob_write_pld    = write_req_pld;
 /*========================================*/
 /*              SRAM R/W Ctrl             */
 /*========================================*/
-logic                       ram_read_en;
-logic [SRAM_GROUP_NUM-1:0]  ram_read_sel;
-
-logic [SRAM_GROUP_NUM-1:0]   mem_req_vld;
-logic [SRAM_GROUP_NUM-1:0]   mem_req_rdy;
-logic [SRAM_GROUP_NUM-1:0]   mem_req_opcode;
-logic [ADDR_WIDTH-1:0]       mem_req_addr[SRAM_GROUP_NUM-1:0];
-logic [DATA_WIDTH-1:0]       mem_req_data[SRAM_GROUP_NUM-1:0];
-logic [DATA_WIDTH-1:0]       mem_req_bit_en[SRAM_GROUP_NUM-1:0];
-logic [MEM_SIDEBAND_WIDTH-1:0]mem_req_sideband[SRAM_GROUP_NUM-1:0];
 
 fcip_sfifo_spram_ctrl #(
     .FIFO_DEPTH_PER_GROUP(FIFO_DEPTH_PER_GROUP),
     .SRAM_GROUP_NUM (SRAM_GROUP_NUM),
     .DATA_WIDTH(DATA_WIDTH),
-    .ALMOST_FULL_THRESHOLD (FIFO_DEPTH_PER_GROUP/2),
-    .ALMOST_EMPTY_THRESHOLD(FIFO_DEPTH_PER_GROUP/4),
+    .ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
+    .ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
     .FORWARD_EN(0),
     .SIDEBAND_WIDTH(MEM_SIDEBAND_WIDTH)
 )u_sfifo_spram_ctrl(
@@ -125,14 +128,18 @@ fcip_sfifo_spram_ctrl #(
     .write_vld              (ram_write_vld   ),
     .write_pld              (ram_write_pld   ),
     .write_rdy              (ram_write_rdy   ),
-    .ram_read_en            (ram_read_en     ),
-    .ram_read_sel           (ram_read_sel    ),
+
+    .sram_read_en           (sram_read_en     ),
+    .sram_read_sel          (sram_read_sel    ),
+    .sram_pre_alloc_id      (sram_pre_alloc_id),
+
     .spram_ctrl_empty       (spram_ctrl_empty),
     .spram_ctrl_full        (spram_ctrl_full ),
     .spram_ctrl_almost_full (spram_ctrl_almost_full),
     .spram_ctrl_almost_empty(spram_ctrl_almost_empty),
-    .rob_empty              (rob_empty       ),
-    .rob_full               (rob_full        ),
+
+    .rob_almost_empty       (rob_almost_empty       ),
+    .rob_almost_full        (rob_almost_full        ),
 
     .mem_req_vld            (mem_req_vld     ),
     .mem_req_rdy            (mem_req_rdy     ),
@@ -142,6 +149,13 @@ fcip_sfifo_spram_ctrl #(
     .mem_req_bit_en         (mem_req_bit_en  ),
     .mem_req_sideband       (mem_req_sideband)
 );
+
+/*========================================*/
+/*               pre-alloc                */
+/*========================================*/
+
+assign sram_pre_winc        = sram_read_en;  // sram ctrl empty and read enable
+assign sram_pre_alloc_id    = rob_prealloc_id;
 
 /*========================================*/
 /*            fcip_mem_ctrl_wrap          */
@@ -195,48 +209,57 @@ endgenerate
 fcip_sfifo_spram_rob #(
     .ROB_DEPTH (ROB_DEPTH),
     .DATA_WIDTH(DATA_WIDTH),
-    .FORWARD_EN(FORWARD_EN)
+    .FORWARD_EN(FORWARD_EN),
+    .ALMOST_FULL_THRESHOLD(ROB_ALMOST_FULL_THRESHOLD),
+    .ALMOST_EMPTY_THRESHOLD(0)
 )u_sfifo_spram_rob(
     .clk                (clk            ),
     .rst_n              (rst_n          ),
+
     .rob_req_vld        (rob_write_vld  ),
     .rob_req_pld        (rob_write_pld  ),
     .rob_req_rdy        (rob_write_rdy  ),
-    .rob_prealloc_id    (rob_prealloc_id),
-    .ram_req_vld        (ram_req_vld    ),
-    .ram_req_pld        (ram_req_pld    ),
-    .ram_req_rdy        (ram_req_rdy    ),
+
+    .ram_req_vld        (sram_req_vld    ),
+    .ram_req_pld        (sram_req_pld    ),
+    .ram_req_id         (sram_req_id     ),
+    .ram_req_rdy        (sram_req_rdy    ),
+
     .read_vld           (read_resp_vld  ),
     .read_pld           (read_resp_pld  ),
     .read_rdy           (read_resp_rdy  ),
-    .rob_empty          (rob_empty      ),
-    .rob_full           (rob_full       ),
-    .sram_pre_winc      (sram_pre_winc  )
+
+    .rob_empty          (      ),
+    .rob_full           (      ),
+    .rob_almost_empty   (rob_almost_empty),
+    .rob_almost_full    (rob_almost_full ),
+
+    .sram_pre_winc      (sram_pre_winc  ),
+    .rob_prealloc_id    (rob_prealloc_id)
     );
 
 /*========================================*/
 /*             Delay control              */
 /*========================================*/
 
-localparam integer unsigned SRAM_DELAY_TOTAL = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
-logic                       ram_read_en_delay;
-logic [SRAM_GROUP_NUM-1:0]  ram_read_sel_delay;
+logic                       sram_read_en_delay;
+logic [SRAM_GROUP_NUM-1:0]  sram_read_sel_delay;
 
 generate 
     if(SRAM_DELAY_TOTAL ==1)begin
         always_ff @(posedge clk or negedge rst_n) begin
             if (~rst_n) begin
-                ram_read_en_delay <= 'b0;
+                sram_read_en_delay <= 'b0;
             end else begin
-                ram_read_en_delay <= ram_read_en;
+                sram_read_en_delay <= sram_read_en;
             end
         end
 
         always_ff @(posedge clk or negedge rst_n) begin
             if (~rst_n) begin
-                ram_read_sel_delay <= 'b0;
+                sram_read_sel_delay <= 'b0;
             end else begin
-                ram_read_sel_delay <= ram_read_sel;
+                sram_read_sel_delay <= sram_read_sel;
             end
         end
     end else begin
@@ -248,8 +271,8 @@ generate
     ) u_sram_en_sync(
         .clk         (clk  ),
         .rst_n       (rst_n),
-        .d           (ram_read_en),
-        .q           (ram_read_en_delay)
+        .d           (sram_read_en),
+        .q           (sram_read_en_delay)
     );
 
     fcip_sync_cell #(
@@ -260,8 +283,8 @@ generate
     ) u_sram_sel_sync(
         .clk         (clk  ),
         .rst_n       (rst_n),
-        .d           (ram_read_sel),
-        .q           (ram_read_sel_delay)
+        .d           (sram_read_sel),
+        .q           (sram_read_sel_delay)
     );
     end
 endgenerate
@@ -270,21 +293,32 @@ endgenerate
 /*                SRAM MUX                */
 /*========================================*/
 
-logic [SRAM_GROUP_NUM-1:0]  ram_read_sel_delay_en;
-logic [DATA_WIDTH-1:0]      mem_data_sel;
+logic [SRAM_GROUP_NUM-1:0]      sram_read_sel_delay_en;
+logic [DATA_WIDTH-1:0]          mem_data_sel;
+logic [MEM_SIDEBAND_WIDTH-1:0]  mem_rsp_sideband_sel;
 
-assign ram_read_sel_delay_en = {SRAM_GROUP_NUM{ram_read_en_delay}} & ram_read_sel_delay;
+assign sram_read_sel_delay_en = {SRAM_GROUP_NUM{sram_read_en_delay}} & sram_read_sel_delay;
 
 fcip_real_mux_onehot #(
     .WIDTH     (SRAM_GROUP_NUM),
     .PLD_WIDTH (DATA_WIDTH)
 )u_sram_data_mux(
-    .select_onehot  (ram_read_sel_delay_en),
+    .select_onehot  (sram_read_sel_delay_en),
     .v_pld          (mem_rsp_data),
     .select_pld     (mem_data_sel)
 );
 
-assign ram_req_vld = |mem_rsp_en;
-assign ram_req_pld = mem_data_sel;
+cmn_real_mux_onehot #(
+    .WIDTH     (SRAM_GROUP_NUM),
+    .PLD_WIDTH (MEM_SIDEBAND_WIDTH)
+)u_sram_sideband_mux(
+    .select_onehot  (sram_read_sel_delay_en),
+    .v_pld          (mem_rsp_sideband),
+    .select_pld     (mem_rsp_sideband_sel)
+);
+
+assign sram_req_vld = |mem_rsp_en;
+assign sram_req_pld = mem_data_sel;
+assign sram_req_id  = mem_rsp_sideband_sel;
 
 endmodule

@@ -32,10 +32,6 @@ module fcip_sync_fifo_reg #(
 
 logic [CNT_WIDTH-1:0]           wr_ptr;
 logic [CNT_WIDTH-1:0]           rd_ptr;
-//logic [CNT_WIDTH-1:0]           wr_ptr_true;
-//logic [CNT_WIDTH-1:0]           rd_ptr_true;
-//logic                           wr_ptr_msb;
-//logic                           rd_ptr_msb;
 logic [FIFO_WIDTH-1:0]          array_data[FIFO_DEPTH-1:0];
 logic [CNT_WIDTH:0]             ptr_cnt;
 logic                           rinc;
@@ -105,7 +101,9 @@ end
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
         almost_full <= 'b0;
-    else if(ptr_cnt >= ALMOST_FULL_THRESHOLD)
+    else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
+        almost_full <= 1'b1;
+    else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && winc && ~rinc)
         almost_full <= 1'b1;
     else 
         almost_full <= 1'b0;
@@ -116,18 +114,15 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_empty <= 'b0;
     else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
         almost_empty <= 1'b1;
+    else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD-1)) && rinc && ~winc)
+        almost_empty <= 1'b1;
     else 
         almost_empty <= 1'b0;
 end
 
-//assign fifo_used            = (wr_ptr >= rd_ptr) ? (wr_ptr - rd_ptr): (wr_ptr + FIFO_DEPTH - rd_ptr);
-
 /*========================================*/
 /*               pointer check            */
 /*========================================*/
-
-//assign {wr_ptr_msb,wr_ptr_true} = wr_ptr;
-//assign {rd_ptr_msb,rd_ptr_true} = rd_ptr;
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
@@ -146,9 +141,6 @@ always_ff @( posedge clk or negedge rst_n ) begin
     else if( ptr_cnt >= 1 )
         empty <= 1'b0;
 end
-
-//assign full     = (rd_ptr_true == wr_ptr_true) && (wr_ptr_msb != rd_ptr_msb);
-//assign empty    = (rd_ptr == wr_ptr);
 
 /*========================================*/
 /*                Reg entry               */

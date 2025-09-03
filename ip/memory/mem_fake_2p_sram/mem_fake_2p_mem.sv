@@ -7,10 +7,11 @@ module mem_fake_2p_mem
     parameter integer unsigned DATA_WIDTH = 128,
     parameter integer unsigned ADDR_WIDTH = 10,
     parameter integer unsigned MCP_CYCLE = 1,
-    parameter integer unsigned WRITE_BUFFER_SIZE =16,
-    parameter integer unsigned RW_ARBITER_TYPE =0,  //0 read first,1 write first
-    parameter integer unsigned READ_FORWARD_EN =1,
-    parameter integer unsigned READ_BUFFER_SIZE = 8
+    parameter integer unsigned WRITE_BUFFER_SIZE = 0,
+    parameter integer unsigned RW_ARBITER_TYPE = 0,  //0 read first,1 write first
+    parameter integer unsigned READ_FORWARD_EN = 1,
+    parameter integer unsigned READ_BUFFER_SIZE = 8,
+    parameter integer unsigned WRITE_BIT_MASK_EN = 0
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -66,9 +67,10 @@ logic [DATA_WIDTH-1:0]       write_sram_bit_en;
 
 logic                        read_cmp_vld;
 logic [ADDR_WIDTH-1:0]       read_cmp_addr;
-logic                        read_cmp_hit_delay;
 
+logic                        read_cmp_hit_delay;
 logic [DATA_WIDTH-1:0]       read_hit_data_delay;
+logic [DATA_WIDTH-1:0]       read_hit_data_bit_en_delay;
 
 logic                        read_buffer_idle;
 logic                        read_out_vld;
@@ -113,7 +115,8 @@ generate
             .ADDR_WIDTH         (ADDR_WIDTH),
             .DATA_WIDTH         (DATA_WIDTH),
             .WRITE_BUFFER_SIZE  (WRITE_BUFFER_SIZE),
-            .MEM_LATENCY        (MEM_LATENCY)
+            .MEM_LATENCY        (MEM_LATENCY),
+            .WRITE_BIT_MASK_EN  (WRITE_BIT_MASK_EN)
         ) u_mem_fake_write_buffer(
             .clk                    (clk             ),
             .rst_n                  (rst_n           ),
@@ -139,7 +142,8 @@ generate
             .read_cmp_vld           (read_cmp_vld    ),
             .read_cmp_addr          (read_cmp_addr   ),
             .read_cmp_hit_delay     (read_cmp_hit_delay ),
-            .read_hit_data_delay    (read_hit_data_delay)
+            .read_hit_data_delay    (read_hit_data_delay),
+            .read_hit_data_bit_en_delay(read_hit_data_bit_en_delay)
     );
     end
 endgenerate
@@ -186,12 +190,24 @@ generate
         assign read_out_data        = mem_rsp_data;
         assign read_out_sideband    = mem_rsp_sideband;
 
-    end else begin
+    end else if(WRITE_BIT_MASK_EN == 0)begin
 
         assign read_out_vld         = mem_rsp_en;
+        
         assign read_out_data        = read_cmp_hit_delay ? read_hit_data_delay : mem_rsp_data;
         assign read_out_sideband    = mem_rsp_sideband;
 
+    end else begin
+
+        logic [DATA_WIDTH-1:0]  rsp_vld_data;
+        logic [DATA_WIDTH-1:0]  data_merge;
+
+        assign read_out_vld         = mem_rsp_en;
+        assign rsp_vld_data         = mem_rsp_data & ~read_hit_data_bit_en_delay;
+        assign data_merge           = rsp_vld_data | read_hit_data_delay;
+        
+        assign read_out_data        = read_cmp_hit_delay ? data_merge : mem_rsp_data;
+        assign read_out_sideband    = mem_rsp_sideband;
     end
 endgenerate
 
@@ -199,7 +215,7 @@ endgenerate
 /*                ECC decode              */
 /*========================================*/
 
-
+//add future
 
 /*========================================*/
 /*              Memory Wrapper            */
