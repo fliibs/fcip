@@ -1,1 +1,0 @@
-$COMMON_IP_PATH/rtl/regslice/fcip_reg_slice.sv
