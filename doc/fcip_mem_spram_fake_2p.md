@@ -41,3 +41,7 @@
 - 但如果没启用SRAM_RSP_PIPE_STAGE，那么启用READ_FORWARD_EN会把SRAM延迟和forward延迟放在同一拍里，对timing可能是潜在的挑战，需要注意，因此如果不苛求延迟，如果没开RSP_PIPE，那么也不用打开FORWARD。
 
 这种考虑在设计中很多见，IP提供了大量的灵活性用来fix timing，请根据微架构和物理实现斟酌如何配置。
+
+NOTED:
+
+- 如果当前输入不支持bit mask，建议关掉WRITE_BIT_MASK_EN。防止频率过高，timing有违例风险

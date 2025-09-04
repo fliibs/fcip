@@ -74,3 +74,7 @@ LUT就是一个不带fowrading逻辑的基于reg的同步FIFO，用来记录每�
 | SRAM_REQ_PIPE_STAGE | 0 | >=0 | 定义发往SRAM的数据会打几拍|
 | SRAM_RSP_PIPE_STAGE | 0 | >=0 | 定义从SRAM回来的数据会打几拍|
 | MCP_CYCLE | 1 | >= 1| 定义一次读写SRAM需要多少个cycle，根据这个值设置multi cycle path|
+
+## Noted
+
+- SRAM是否需要做forwaed？是否需要将两条通路的forward分成两个参数？
