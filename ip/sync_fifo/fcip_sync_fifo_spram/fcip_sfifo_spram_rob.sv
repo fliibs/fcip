@@ -95,7 +95,7 @@ assign winc_vld          = sram_winc || rob_winc;
 assign rob_vld_ptr_id    = sram_winc ? ram_req_id : rob_wptr;
 assign winc_data         = sram_winc ? ram_req_pld : rob_req_pld;
 
-assign rob_prealloc_id  = rob_wptr;
+assign rob_prealloc_id   = rob_wptr;
 
 /*========================================*/
 /*                rptr/wptr               */
@@ -126,11 +126,55 @@ always_ff @( posedge clk or negedge rst_n ) begin
         ptr_cnt <= ptr_cnt - 1'b1;
 end
 
-assign rob_empty = (ptr_cnt==0);
-assign rob_full  = (ptr_cnt==ROB_DEPTH);
+/*========================================*/
+/*               pointer check            */
+/*========================================*/
 
-assign rob_almost_empty = (ptr_cnt==ALMOST_EMPTY_THRESHOLD);
-assign rob_almost_full  = (ptr_cnt==ALMOST_FULL_THRESHOLD);
+always_ff @( posedge clk or negedge rst_n ) begin
+    if(~rst_n)
+        rob_full <= 'b0;
+    else if( (ptr_cnt == (ROB_DEPTH-1)) && winc_incr && ~rinc)
+        rob_full <= 1'b1;
+    else if( ptr_cnt <= (ROB_DEPTH-1) )
+        rob_full <= 1'b0;
+end
+
+always_ff @( posedge clk or negedge rst_n ) begin
+    if(~rst_n)
+        rob_empty <= 'b1;
+    else if( (ptr_cnt == 1) && rinc && ~winc_incr )
+        rob_empty <= 1'b1;
+    else if( ptr_cnt >= 1 )
+        rob_empty <= 1'b0;
+end
+
+//assign rob_empty = (ptr_cnt==0);
+//assign rob_full  = (ptr_cnt==ROB_DEPTH);
+
+always_ff @( posedge clk or negedge rst_n ) begin
+    if(~rst_n)
+        rob_almost_full <= 'b0;
+    else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
+        rob_almost_full <= 1'b1;
+    else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && winc_incr && ~rinc)
+        rob_almost_full <= 1'b1;
+    else 
+        rob_almost_full <= 1'b0;
+end
+
+always_ff @( posedge clk or negedge rst_n ) begin
+    if(~rst_n)
+        rob_almost_empty <= 'b0;
+    else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
+        rob_almost_empty <= 1'b1;
+    else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD-1)) && rinc && ~winc_incr)
+        rob_almost_empty <= 1'b1;
+    else 
+        rob_almost_empty <= 1'b0;
+end
+
+//assign rob_almost_empty = (ptr_cnt==ALMOST_EMPTY_THRESHOLD);
+//assign rob_almost_full  = (ptr_cnt==ALMOST_FULL_THRESHOLD);
 
 /*========================================*/
 /*               rob entry                */

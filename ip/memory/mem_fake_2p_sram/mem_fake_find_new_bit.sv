@@ -18,19 +18,21 @@ module mem_fake_find_new_bit #(
     output logic [DATA_WIDTH-1:0]           cmp_hit_bit_en
 );
 
+logic [WRITE_BUFFER_SIZE-1:0] array_data_switch[DATA_WIDTH-1:0];
+
 logic [WRITE_BUFFER_SIZE-1:0] cmp_hit_bit[DATA_WIDTH-1:0];
 logic [WRITE_BUFFER_SIZE-1:0] mask_en;
 logic [WRITE_BUFFER_SIZE-1:0] cmp_hit_onehot;
 
 logic [WRITE_BUFFER_SIZE-1:0] hazard_check_bit_forward[DATA_WIDTH-1:0];
-logic [PTR_WIDTH-1:0]         hazard_check_bit_forward_bin[DATA_WIDTH-1:0];
+logic [WRITE_BUFFER_SIZE-1:0] hazard_check_bit_forward_oh[DATA_WIDTH-1:0];
 logic [DATA_WIDTH-1:0]        hazard_check_bit_forward_en;
 
 logic [WRITE_BUFFER_SIZE-1:0] hazard_check_bit_backward[DATA_WIDTH-1:0];
-logic [PTR_WIDTH-1:0]         hazard_check_bit_backward_bin[DATA_WIDTH-1:0];
+logic [WRITE_BUFFER_SIZE-1:0] hazard_check_bit_backward_oh[DATA_WIDTH-1:0];
 logic [DATA_WIDTH-1:0]        hazard_check_bit_backward_en;
 
-logic [PTR_WIDTH-1:0]         multi_hit_addr_index[DATA_WIDTH-1:0];
+logic [WRITE_BUFFER_SIZE-1:0] multi_hit_addr_index[DATA_WIDTH-1:0];
 
 generate
 
@@ -41,7 +43,8 @@ generate
 
     for(genvar i=0; i<DATA_WIDTH; i++ )begin:LOOP_FOR_BIT
         for(genvar j=0;j<WRITE_BUFFER_SIZE; j++)begin:LOOP_FOR_BUFFER_SIZE
-            assign cmp_hit_bit[i][j] = cmp_vld && (cmp_addr == cmp_array_addr[j]) && array_vld[j] && cmp_array_bit_en[j][i];
+            assign cmp_hit_bit[i][j]        = cmp_vld && (cmp_addr == cmp_array_addr[j]) && array_vld[j] && cmp_array_bit_en[j][i];
+            assign array_data_switch[i][j]  = cmp_array_data[j][i];
         end
     end 
 
@@ -53,9 +56,9 @@ generate
     end
 
     for(genvar i=0; i<DATA_WIDTH; i++ )begin:GET_HIT_BIT
-        assign multi_hit_addr_index[i] = hazard_check_bit_forward_en[i] ? hazard_check_bit_forward_bin[i] : hazard_check_bit_backward_bin[i];
+        assign multi_hit_addr_index[i] = hazard_check_bit_forward_en[i] ? hazard_check_bit_forward_oh[i] : hazard_check_bit_backward_oh[i];
         assign cmp_hit_bit_en[i]       = (|hazard_check_bit_forward_en[i]) || (|hazard_check_bit_backward_en[i]);
-        assign cmp_hit_data[i]         = cmp_array_data[multi_hit_addr_index[i]];
+        assign cmp_hit_data[i]         = |(array_data_switch[i] & multi_hit_addr_index[i]);
     end
 
     for(genvar i=0;i<DATA_WIDTH;i++)begin:BIT_HAZARD_LEAD_ONE
@@ -63,8 +66,8 @@ generate
             .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
         ) u_hazard_bit_forward_lead_one(
             .v_entry_vld    (hazard_check_bit_forward[i]),
-            .v_free_idx_oh  (                           ),
-            .v_free_idx_bin (hazard_check_bit_forward_bin[i]),
+            .v_free_idx_oh  (hazard_check_bit_forward_oh[i]),
+            .v_free_idx_bin (),
             .v_free_vld     (hazard_check_bit_forward_en[i] )
         );
 
@@ -72,8 +75,8 @@ generate
             .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
         ) u_hazard_bit_backward_lead_one(
             .v_entry_vld    (hazard_check_bit_forward[i]),
-            .v_free_idx_oh  (                           ),
-            .v_free_idx_bin (hazard_check_bit_backward_bin[i]),
+            .v_free_idx_oh  (hazard_check_bit_backward_oh[i]),
+            .v_free_idx_bin (),
             .v_free_vld     (hazard_check_bit_backward_en[i] )
         );
     end

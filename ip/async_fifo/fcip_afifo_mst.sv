@@ -139,12 +139,9 @@ assign empty = ~(|((rptr_async_inner ^ rq2_wptr_sync1) & rptr_sync_inner));
 logic                   reg_slice_vld_r;
 logic [DATA_WIDTH-1:0]  reg_slice_pld_r;
 
-// TODO: tmp fix for compile pass
-logic read_resp_rdy;
-
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
-assign read_out_rdy         = ~reg_slice_vld_r || read_resp_rdy;
+assign read_out_rdy         = ~reg_slice_vld_r || m_rdy;
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
