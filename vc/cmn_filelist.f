@@ -36,6 +36,7 @@ $COMMON_IP_PATH/rtl/arbiter/cmn_grant_gen_fp.sv
 $COMMON_IP_PATH/rtl/memory/cmn_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_strb_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_single_mem_model.sv
+$COMMON_IP_PATH/rtl/memory/fcip_spram_model.sv
 
 -f $COMMON_IP_PATH/rtl/regslice/fcip_reg_slice.f
 
