@@ -21,7 +21,7 @@ module afifo_mst #(
     input  logic [FIFO_DEPTH-1:0]   wptr_async,
     output logic [FIFO_DEPTH-1:0]   rptr_async,
     output logic [FIFO_DEPTH-1:0]   rptr_sync,
-    input  logic [DATA_WIDTH:0]     pld_sync
+    input  logic [DATA_WIDTH:0]     pld_sync  //DATA_WIDTH+1,used for entry vld
 );
 
 logic                       empty;
@@ -36,13 +36,28 @@ logic [FIFO_DEPTH-1:0]      rptr_sync_nxt;
 logic [FIFO_DEPTH-1:0]      rptr_async_nxt;
 logic [FIFO_DEPTH-1:0]      rq2_wptr_sync1;
 logic [FIFO_DEPTH-1:0]      rq2_wptr_sync0;
-logic [FIFO_DEPTH-1:0]      rptr_sync_inner;
-logic [FIFO_DEPTH-1:0]      rptr_async_inner;
+logic [FIFO_DEPTH-1:0]      rptr_sync_inner_SIZE_ONLY;
+logic [FIFO_DEPTH-1:0]      rptr_async_inner_SIZE_ONLY;
 
-logic [FIFO_DEPTH-1:0]      rptr_sync_marker;
-logic [FIFO_DEPTH-1:0]      rptr_async_marker;
+logic [FIFO_DEPTH-1:0]      rptr_sync_nxt_size_only;
+logic [FIFO_DEPTH-1:0]      rptr_async_nxt_size_only;
+logic [FIFO_DEPTH-1:0]      rptr_sync_marker_SIZE_ONLY;
+logic [FIFO_DEPTH-1:0]      rptr_async_marker_SIZE_ONLY;
 logic [DATA_WIDTH:0]        pld_sync_marker;
 logic [FIFO_DEPTH-1:0]      wptr_async_marker;
+
+/*========================================*/
+/*               CDC Clock Marker         */
+/*========================================*/
+
+logic clk_marker;
+
+fcip_clk_marker #(
+    .VT_TYPE("LVT")
+) afifo_mst_rclk_marker(
+    .I (clk),
+    .Z (clk_marker)
+);
 
 /*========================================*/
 /*               read stall               */
@@ -55,8 +70,8 @@ assign idle = empty;
 /*========================================*/
 
 assign wr_async_ptr_zero = ( (|rq2_wptr_sync1)==0 ) || ( (&rq2_wptr_sync1) == 1);
-assign rd_ptr_zero       = (|rptr_sync)==0;
-assign full_zero    = wr_async_ptr_zero && rd_ptr_zero;
+assign rd_ptr_zero       = rptr_sync_inner_SIZE_ONLY == {{(FIFO_DEPTH-1){1'b0}},1'b1};
+assign full_zero         = wr_async_ptr_zero && rd_ptr_zero;
 
 /*========================================*/
 /*              read ptr gen              */
@@ -67,48 +82,54 @@ assign rinc               = read_req_handshake;
 
 //read pointer sync
 
-assign rptr_sync_nxt = {rptr_sync_inner[FIFO_DEPTH-2:0],rptr_sync_inner[FIFO_DEPTH-1]};
+assign rptr_sync_nxt = {rptr_sync_inner_SIZE_ONLY[FIFO_DEPTH-2:0],rptr_sync_inner_SIZE_ONLY[FIFO_DEPTH-1]};
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        rptr_sync_inner <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_inner_SIZE_ONLY <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(clear)
-        rptr_sync_inner <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_inner_SIZE_ONLY <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(rinc)
-        rptr_sync_inner <= rptr_sync_nxt;
+        rptr_sync_inner_SIZE_ONLY <= rptr_sync_nxt;
 end
 
 // no fanout rptr_sync pointer for sdc marker
-always_ff @( posedge clk or negedge rst_n ) begin
+
+assign rptr_sync_nxt_size_only = {rptr_sync_marker_SIZE_ONLY[FIFO_DEPTH-2:0],rptr_sync_marker_SIZE_ONLY[FIFO_DEPTH-1]};
+
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        rptr_sync_marker <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_marker_SIZE_ONLY <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(clear)
-        rptr_sync_marker <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
+        rptr_sync_marker_SIZE_ONLY <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(rinc)
-        rptr_sync_marker <= rptr_sync_nxt;
+        rptr_sync_marker_SIZE_ONLY <= rptr_sync_nxt_size_only;
 end
 
 //read pointer async for write domain compare
 
-assign rptr_async_nxt = {rptr_async_inner[FIFO_DEPTH-2:0],~rptr_async_inner[FIFO_DEPTH-1]};
+assign rptr_async_nxt = {rptr_async_inner_SIZE_ONLY[FIFO_DEPTH-2:0],~rptr_async_inner_SIZE_ONLY[FIFO_DEPTH-1]};
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        rptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_inner_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(clear)
-        rptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_inner_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(rinc)
-        rptr_async_inner <= rptr_async_nxt;
+        rptr_async_inner_SIZE_ONLY <= rptr_async_nxt;
 end
 
 // no fanout rptr_async pointer for sdc marker
-always_ff @( posedge clk or negedge rst_n ) begin
+
+assign rptr_async_nxt_size_only = {rptr_async_marker_SIZE_ONLY[FIFO_DEPTH-2:0],~rptr_async_marker_SIZE_ONLY[FIFO_DEPTH-1]};
+
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        rptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_marker_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(clear)
-        rptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
+        rptr_async_marker_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(rinc)
-        rptr_async_marker <= rptr_async_nxt;
+        rptr_async_marker_SIZE_ONLY <= rptr_async_nxt_size_only;
 end
 /*========================================*/
 /*              write ptr sync             */
@@ -120,8 +141,8 @@ fcip_sync_cell #(
     .VT_TYPE    ( 1          ), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
     .RST_VALUE  ( 0          )  // 0: sync_arst, 1: sync_aset
 ) rptr_sync_cell(
-    .clk        ( clk              ),
-    .rst_n      ( rst_n            ),
+    .clk        ( clk_marker        ),
+    .rst_n      ( rst_n             ),
     .d          ( wptr_async_marker ),
     .q          ( rq2_wptr_sync1    )
 );
@@ -130,7 +151,7 @@ fcip_sync_cell #(
 /*               ptr compare              */
 /*========================================*/
 
-assign empty = ~(|((rptr_async_inner ^ rq2_wptr_sync1) & rptr_sync_inner));
+assign empty = ~(|((rptr_async_inner_SIZE_ONLY ^ rq2_wptr_sync1) & rptr_sync_inner_SIZE_ONLY));
 
 /*========================================*/
 /*         read response reg slice        */
@@ -143,7 +164,7 @@ assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
 assign read_out_rdy         = ~reg_slice_vld_r || m_rdy;
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         reg_slice_vld_r <= 1'b0;
     else if(read_out_vld && read_out_rdy)
@@ -152,7 +173,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
         reg_slice_vld_r <= 1'b0;
 end
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         reg_slice_pld_r <= 'b0;
     else if(read_out_vld && read_out_rdy)
@@ -188,14 +209,14 @@ endgenerate
 fcip_marker #(
     .DATA_WIDTH ( FIFO_DEPTH )
 ) async_rptr_sync_marker(
-    .I          ( rptr_sync_marker ),
+    .I          ( rptr_sync_marker_SIZE_ONLY ),
     .Z          ( rptr_sync        )
 );
 
 fcip_marker #(
     .DATA_WIDTH ( FIFO_DEPTH )
 ) rd_rptr_async_primary_marker(
-    .I          ( rptr_async_marker ),
+    .I          ( rptr_async_marker_SIZE_ONLY ),
     .Z          ( rptr_async        )
 );
 

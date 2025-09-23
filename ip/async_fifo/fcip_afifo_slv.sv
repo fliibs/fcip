@@ -22,7 +22,7 @@ module afifo_slv #(
 
     input  logic [FIFO_DEPTH-1:0]   rptr_async,
     input  logic [FIFO_DEPTH-1:0]   rptr_sync,
-    output logic [DATA_WIDTH:0]     pld_sync
+    output logic [DATA_WIDTH:0]     pld_sync  //DATA_WIDTH+1,used for entry vld
 );
 
 logic                   full;
@@ -35,7 +35,7 @@ logic [FIFO_DEPTH-1:0]  wq2_rptr_sync0;
 logic [FIFO_DEPTH-1:0]  wq2_rptr_sync1;
 logic                   rd_async_ptr_zero;
 logic                   wr_ptr_zero;
-logic [FIFO_DEPTH-1:0]  wptr_async_inner;
+logic [FIFO_DEPTH-1:0]  wptr_async_inner_SIZE_ONLY;
 
 logic                   s_gen_vld;
 logic [DATA_WIDTH:0]    s_gen_pld;
@@ -47,10 +47,24 @@ logic                   bubble_req_vld;
 logic [DATA_WIDTH:0]    bubble_req_pld;
 logic                   bubble_gen_rdy;
 
+logic [FIFO_DEPTH-1:0]  wptr_async_nxt_size_only;
 logic [FIFO_DEPTH-1:0]  rptr_sync_marker;
 logic [FIFO_DEPTH-1:0]  rptr_async_marker;
 logic [DATA_WIDTH:0]    pld_sync_marker;
-logic [FIFO_DEPTH-1:0]  wptr_async_marker;
+logic [FIFO_DEPTH-1:0]  wptr_async_marker_SIZE_ONLY;
+
+/*========================================*/
+/*               CDC Clock Marker         */
+/*========================================*/
+
+logic clk_marker;
+
+fcip_clk_marker #(
+    .VT_TYPE("LVT")
+) afifo_slv_wclk_marker(
+    .I (clk),
+    .Z (clk_marker)
+);
 
 /*========================================*/
 /*               Bubble Gen               */
@@ -64,27 +78,44 @@ assign bubble_req_pld   = {(DATA_WIDTH+1){1'b0}};
 /*               fixed arbiter            */
 /*========================================*/
 
-assign s_pld_ext = {s_pld,1'b1}; // bit[0] is 1(normal), is 0(bubble)
-assign s_vld_ext = s_vld && ~stall;
+generate
+    
+    if(AUTO_CLEAR_EN)begin:AUTO_CLEAR_EN_OPEN
+        assign s_pld_ext = {s_pld,1'b1}; // bit[0] is 1(normal), is 0(bubble)
+        assign s_vld_ext = s_vld && ~stall;
+        
+        fcip_fix_arb #(
+            .PLD_TYPE(logic [DATA_WIDTH:0])
+        )u_s_arbiter(
+            .clk            (clk),
+            .rst_n          (rst_n),
+        
+            .s_vld_priority (s_vld_ext),
+            .s_rdy_priority (s_rdy),
+            .s_pld_priority (s_pld_ext),
+        
+            .s_vld          (bubble_req_vld),    
+            .s_rdy          (),    
+            .s_pld          (bubble_req_pld),    
+        
+            .m_vld          (s_gen_vld),    
+            .m_rdy          (s_gen_rdy),    
+            .m_pld          (s_gen_pld)
+        );
+        
+    end else begin:AUTO_CLEAR_DISABLE
 
-fcip_fix_arb #(
-    .PLD_TYPE(logic [DATA_WIDTH:0])
-)u_s_arbiter(
-    .clk            (clk),
-    .rst_n          (rst_n),
+        assign s_pld_ext = {s_pld,1'b1}; // bit[0] is 1(normal), is 0(bubble)
+        assign s_vld_ext = s_vld && ~stall;
 
-    .s_vld_priority (s_vld_ext),
-    .s_rdy_priority (s_rdy),
-    .s_pld_priority (s_pld_ext),
+        assign s_gen_vld = s_vld_ext;
+        assign s_gen_pld = s_pld_ext;
+        assign s_rdy     = s_gen_rdy;
 
-    .s_vld          (bubble_req_vld),    
-    .s_rdy          (),    
-    .s_pld          (bubble_req_pld),    
+    end
 
-    .m_vld          (s_gen_vld),    
-    .m_rdy          (s_gen_rdy),    
-    .m_pld          (s_gen_pld)
-);
+endgenerate
+
 
 /*========================================*/
 /*              s stall               */
@@ -105,13 +136,13 @@ assign full_zero  = rd_async_ptr_zero && wr_ptr_zero;
 /*========================================*/
 
 assign s_handshake  = s_gen_vld && s_gen_rdy;
-assign winc                 = s_handshake;
+assign winc         = s_handshake;
 
 //write pointer sync
 
 assign wptr_sync_nxt = {wptr_sync[FIFO_DEPTH-2:0],wptr_sync[FIFO_DEPTH-1]};
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         wptr_sync <= {{(FIFO_DEPTH-1){1'b0}},1'b1};
     else if(clear)
@@ -122,25 +153,27 @@ end
 
 //write pointer async for read domain compare
 
-assign wptr_async_nxt = {wptr_async_inner[FIFO_DEPTH-2:0],~wptr_async_inner[FIFO_DEPTH-1]};
+assign wptr_async_nxt = {wptr_async_inner_SIZE_ONLY[FIFO_DEPTH-2:0],~wptr_async_inner_SIZE_ONLY[FIFO_DEPTH-1]};
 
-always_ff @( posedge clk or negedge rst_n ) begin
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        wptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_inner_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(clear)
-        wptr_async_inner <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_inner_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(winc)
-        wptr_async_inner <= wptr_async_nxt;
+        wptr_async_inner_SIZE_ONLY <= wptr_async_nxt;
 end
 
 // no fanout wptr_async pointer for sdc marker
-always_ff @( posedge clk or negedge rst_n ) begin
+assign wptr_async_nxt_size_only = {wptr_async_marker_SIZE_ONLY[FIFO_DEPTH-2:0],~wptr_async_marker_SIZE_ONLY[FIFO_DEPTH-1]};
+
+always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
-        wptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_marker_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(clear)
-        wptr_async_marker <= {{(FIFO_DEPTH){1'b0}}};
+        wptr_async_marker_SIZE_ONLY <= {{(FIFO_DEPTH){1'b0}}};
     else if(winc)
-        wptr_async_marker <= wptr_async_nxt;
+        wptr_async_marker_SIZE_ONLY <= wptr_async_nxt_size_only;
 end
 
 /*========================================*/
@@ -153,7 +186,7 @@ fcip_sync_cell #(
     .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
     .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
 ) rptr_sync_cell(
-    .clk         (clk  ),
+    .clk         (clk_marker  ),
     .rst_n       (rst_n),
     .d           (rptr_async_marker),
     .q           (wq2_rptr_sync1)
@@ -163,7 +196,7 @@ fcip_sync_cell #(
 /*               ptr compare              */
 /*========================================*/
 
-assign full = |((wptr_async_inner ^ wq2_rptr_sync1) & wptr_sync);
+assign full = |((wptr_async_inner_SIZE_ONLY ^ wq2_rptr_sync1) & wptr_sync);
 
 /*========================================*/
 /*               Reg entry                */
@@ -173,7 +206,7 @@ logic [DATA_WIDTH:0]    mem_array[FIFO_DEPTH-1:0];
 
 generate 
     for(genvar i=0 ; i < FIFO_DEPTH ; i++)begin
-        always_ff @( posedge clk ) begin : AFIFO_REG_ENTRY
+        always_ff @( posedge clk_marker ) begin : AFIFO_REG_ENTRY
             if(wptr_sync[i] && winc)
                 mem_array[i] <= s_gen_pld;
         end
@@ -244,7 +277,7 @@ fcip_marker #(
 fcip_marker #(
     .DATA_WIDTH(FIFO_DEPTH)
 ) async_wptr_async_marker(
-    .I  (wptr_async_marker),
+    .I  (wptr_async_marker_SIZE_ONLY),
     .Z  (wptr_async)
 );
 

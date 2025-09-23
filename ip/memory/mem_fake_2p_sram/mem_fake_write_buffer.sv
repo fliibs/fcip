@@ -158,9 +158,7 @@ logic [DATA_WIDTH-1:0]       read_hit_data_bit_en;
 
 generate
 
-    if(WRITE_BIT_MASK_EN)begin:WRITE_BIT_MASK
-
-        logic [DATA_WIDTH-1:0] cmp_array_data[WRITE_BUFFER_SIZE-1:0];
+    logic [DATA_WIDTH-1:0] cmp_array_data[WRITE_BUFFER_SIZE-1:0];
         logic [ADDR_WIDTH-1:0] cmp_array_addr[WRITE_BUFFER_SIZE-1:0];
         logic [DATA_WIDTH-1:0] cmp_array_bit_en[WRITE_BUFFER_SIZE-1:0];
 
@@ -169,6 +167,8 @@ generate
             assign cmp_array_addr[i]   = write_array_data[i].write_addr;
             assign cmp_array_bit_en[i] = write_array_data[i].write_bit_en;
         end
+
+    if(WRITE_BIT_MASK_EN)begin:WRITE_BIT_MASK
 
         mem_fake_find_new_bit #(
             .ADDR_WIDTH (ADDR_WIDTH),
@@ -193,37 +193,45 @@ generate
 
         logic [WRITE_BUFFER_SIZE-1:0]   mask_en;
         logic [WRITE_BUFFER_SIZE-1:0]   hazard_check[1:0];
-        logic [CNT_WIDTH-1:0]           hazard_bin[1:0];
+        logic [WRITE_BUFFER_SIZE-1:0]   hazard_onehot[1:0];
         logic [1:0]                     hazard_en;
         logic                           multi_hit_en;
-        logic [CNT_WIDTH-1:0]           multi_hit_addr_index;
+        logic [WRITE_BUFFER_SIZE-1:0]   multi_hit_addr_onehot;
+        logic [WRITE_BUFFER_SIZE-1:0]   array_data_switch[DATA_WIDTH-1:0];
 
         assign hazard_check[0]      = cmp_hit_onehot & mask_en;    //forward wptr hazard check
         assign hazard_check[1]      = cmp_hit_onehot & (~mask_en); // backward wptr hazard check
 
         assign multi_hit_en         = hazard_en[0] | hazard_en[1];
-        assign multi_hit_addr_index = hazard_en[0] ? hazard_bin[0] : hazard_bin[1];
+        assign multi_hit_addr_onehot= hazard_en[0] ? hazard_onehot[0] : hazard_onehot[1];
+
+        for(genvar i=0;i<DATA_WIDTH;i++)begin:LOOP_FOR_BIT
+            for(genvar j=0;j<WRITE_BUFFER_SIZE;j++)begin:LOOP_FOR_BUFFER_SIZE
+                assign array_data_switch[i][j] = cmp_array_data[j][i];
+            end
+        end
 
         for(genvar j=0; j<WRITE_BUFFER_SIZE; j++ )begin
             assign cmp_hit_onehot[j]    = read_cmp_vld && (read_cmp_addr == write_array_data[j].write_addr) && write_array_vld[j];
             assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr-1))); 
         end 
+
+        for(genvar i=0;i<DATA_WIDTH;i++)begin:SEL_READ_HIT_BIT
+            assign read_hit_data[i] = |(array_data_switch[i] & multi_hit_addr_onehot); 
+        end
         
         for(genvar i=0;i<2;i++)begin
             cmn_lead_one_msb #(
                 .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
             ) u_hazard_multibit(
                 .v_entry_vld    (hazard_check[i]      ),
-                .v_free_idx_oh  (    ),
-                .v_free_idx_bin (hazard_bin[i]        ),
+                .v_free_idx_oh  (hazard_onehot[i]    ),
+                .v_free_idx_bin (        ),
                 .v_free_vld     (hazard_en[i]         )
             );
         end
 
-        assign write_array_data_sel = write_array_data[multi_hit_addr_index];
-
         assign read_cmp_hit         = |cmp_hit_onehot;
-        assign read_hit_data        = write_array_data_sel.write_data;
         assign read_hit_data_bit_en = {(DATA_WIDTH){1'b1}};
     end
 
