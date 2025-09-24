@@ -62,7 +62,7 @@ generate
     end
 
     for(genvar i=0;i<DATA_WIDTH;i++)begin:BIT_HAZARD_LEAD_ONE
-        cmn_lead_one_msb #(
+        fcip_lead_one_msb #(
             .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
         ) u_hazard_bit_forward_lead_one(
             .v_entry_vld    (hazard_check_bit_forward[i]),
@@ -71,7 +71,7 @@ generate
             .v_free_vld     (hazard_check_bit_forward_en[i] )
         );
 
-        cmn_lead_one_msb #(
+        fcip_lead_one_msb #(
             .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
         ) u_hazard_bit_backward_lead_one(
             .v_entry_vld    (hazard_check_bit_forward[i]),

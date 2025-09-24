@@ -245,49 +245,28 @@ fcip_sfifo_spram_rob #(
 logic                       sram_read_en_delay;
 logic [SRAM_GROUP_NUM-1:0]  sram_read_sel_delay;
 
-generate 
-    if(SRAM_DELAY_TOTAL ==1)begin
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                sram_read_en_delay <= 'b0;
-            end else begin
-                sram_read_en_delay <= sram_read_en;
-            end
-        end
 
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                sram_read_sel_delay <= 'b0;
-            end else begin
-                sram_read_sel_delay <= sram_read_sel;
-            end
-        end
-    end else begin
-        fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (1),
-        .SYN_STAGE   (SRAM_DELAY_TOTAL), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-    ) u_sram_en_sync(
+        .PIPE_STAGE  (SRAM_DELAY_TOTAL), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+    ) u_sram_en_pipe(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (sram_read_en),
         .q           (sram_read_en_delay)
     );
 
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (SRAM_GROUP_NUM),
-        .SYN_STAGE   (SRAM_DELAY_TOTAL), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-    ) u_sram_sel_sync(
+        .PIPE_STAGE  (SRAM_DELAY_TOTAL), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+    ) u_sram_sel_pipe(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (sram_read_sel),
         .q           (sram_read_sel_delay)
     );
-    end
-endgenerate
 
 /*========================================*/
 /*                SRAM MUX                */

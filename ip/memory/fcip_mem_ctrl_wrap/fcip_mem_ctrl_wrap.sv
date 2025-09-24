@@ -83,32 +83,12 @@ fcip_marker #(
 
 assign ram_read_en = mem_req_handshake && (mem_req_opcode==0);
 
-generate
-    if(DATA_PIPE_LATENCY==1)begin
-        
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                mem_rsp_en <= 'b0;
-            end else begin
-                mem_rsp_en <= ram_read_en;
-            end
-        end
-
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                mem_rsp_sideband <= 'b0;
-            end else begin
-                mem_rsp_sideband <= mem_req_sideband;
-            end
-        end
-
-    end else begin
+//data pipe
     
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (1),
-        .SYN_STAGE   (DATA_PIPE_LATENCY), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+        .PIPE_STAGE  (DATA_PIPE_LATENCY), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
     ) u_sram_read_en_sync(
         .clk         (clk  ),
         .rst_n       (rst_n),
@@ -116,20 +96,15 @@ generate
         .q           (mem_rsp_en)
     );
 
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (SIDEBAND_WIDTH),
-        .SYN_STAGE   (DATA_PIPE_LATENCY), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+        .PIPE_STAGE  (DATA_PIPE_LATENCY), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
     ) u_sram_sideband_sync(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (mem_req_sideband),
         .q           (mem_rsp_sideband)
     );
-
-    end
-endgenerate
-
 
 endmodule

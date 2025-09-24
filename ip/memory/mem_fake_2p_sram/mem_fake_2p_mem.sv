@@ -7,11 +7,11 @@ module mem_fake_2p_mem
     parameter integer unsigned DATA_WIDTH = 128,
     parameter integer unsigned ADDR_WIDTH = 10,
     parameter integer unsigned MCP_CYCLE = 1,
-    parameter integer unsigned WRITE_BUFFER_SIZE = 0,
+    parameter integer unsigned WRITE_BUFFER_SIZE = 4,
     parameter integer unsigned RW_ARBITER_TYPE = 0,  //0 read first,1 write first
     parameter integer unsigned READ_FORWARD_EN = 1,
-    parameter integer unsigned READ_BUFFER_SIZE = 8,
-    parameter integer unsigned WRITE_BIT_MASK_EN = 0
+    parameter integer unsigned READ_BUFFER_SIZE = 4,
+    parameter integer unsigned WRITE_BIT_MASK_EN = 1
 )(
     input  logic                        clk,
     input  logic                        rst_n,

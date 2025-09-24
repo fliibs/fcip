@@ -66,6 +66,9 @@ mem_fake_write_req_t            write_req_pld;
 mem_fake_write_req_t            write_array_data[WRITE_BUFFER_SIZE-1:0];
 logic [WRITE_BUFFER_SIZE-1:0]   write_array_vld;
 
+logic                           read_cmp_vld_1d;
+logic [ADDR_WIDTH-1:0]          read_cmp_addr_1d;
+
 /*========================================*/
 /*                prealloc                */
 /*========================================*/
@@ -156,6 +159,11 @@ logic                        read_cmp_hit;
 logic [DATA_WIDTH-1:0]       read_hit_data;
 logic [DATA_WIDTH-1:0]       read_hit_data_bit_en;
 
+always_ff @( posedge clk ) begin
+    read_cmp_vld_1d  <= read_cmp_vld;
+    read_cmp_addr_1d <= read_cmp_addr;
+end
+
 generate
 
     logic [DATA_WIDTH-1:0] cmp_array_data[WRITE_BUFFER_SIZE-1:0];
@@ -176,8 +184,8 @@ generate
             .WRITE_BUFFER_SIZE(WRITE_BUFFER_SIZE),
             .PTR_WIDTH(CNT_WIDTH)
         ) u_mem_fake_find_new_bit(
-            .cmp_vld            (read_cmp_vld         ),
-            .cmp_addr           (read_cmp_addr        ),
+            .cmp_vld            (read_cmp_vld_1d      ),
+            .cmp_addr           (read_cmp_addr_1d     ),
             .cmp_array_data     (cmp_array_data       ),
             .cmp_array_addr     (cmp_array_addr       ),
             .cmp_array_bit_en   (cmp_array_bit_en     ),
@@ -212,7 +220,7 @@ generate
         end
 
         for(genvar j=0; j<WRITE_BUFFER_SIZE; j++ )begin
-            assign cmp_hit_onehot[j]    = read_cmp_vld && (read_cmp_addr == write_array_data[j].write_addr) && write_array_vld[j];
+            assign cmp_hit_onehot[j]    = read_cmp_vld_1d && (read_cmp_addr_1d == write_array_data[j].write_addr) && write_array_vld[j];
             assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr-1))); 
         end 
 
@@ -221,7 +229,7 @@ generate
         end
         
         for(genvar i=0;i<2;i++)begin
-            cmn_lead_one_msb #(
+            fcip_lead_one_msb #(
                 .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
             ) u_hazard_multibit(
                 .v_entry_vld    (hazard_check[i]      ),
@@ -243,62 +251,40 @@ endgenerate
 
 generate 
     if(MEM_LATENCY==1)begin
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                read_cmp_hit_delay <= 'b0;
-            end else begin
-                read_cmp_hit_delay <= read_cmp_hit;
-            end
-        end
         
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                read_hit_data_delay <= 'b0;
-            end else begin
-                read_hit_data_delay <= read_hit_data;
-            end
-        end
-
-        always_ff @(posedge clk or negedge rst_n) begin
-            if (~rst_n) begin
-                read_hit_data_bit_en_delay <= 'b0;
-            end else begin
-                read_hit_data_bit_en_delay <= read_hit_data_bit_en;
-            end
-        end
+        assign read_cmp_hit_delay           = read_cmp_hit;
+        assign read_hit_data_delay          = read_hit_data;
+        assign read_hit_data_bit_en_delay   = read_hit_data_bit_en;
 
     end else begin
     
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (1),
-        .SYN_STAGE   (MEM_LATENCY), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-    ) u_read_cmp_vld_sync(
+        .PIPE_STAGE  (MEM_LATENCY-1), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+    ) u_read_cmp_vld_pipe(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (read_cmp_hit),
         .q           (read_cmp_hit_delay)
     );
 
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (DATA_WIDTH),
-        .SYN_STAGE   (MEM_LATENCY), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-    ) u_read_hit_data_sync(
+        .PIPE_STAGE  (MEM_LATENCY-1), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+    ) u_read_hit_data_pipe(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (read_hit_data),
         .q           (read_hit_data_delay)
     );
 
-    fcip_sync_cell #(
+    fcip_data_pipe #(
         .DATA_WIDTH  (DATA_WIDTH),
-        .SYN_STAGE   (MEM_LATENCY), // must upper than 1
-        .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-        .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-    ) u_read_hit_data_bit_en_sync(
+        .PIPE_STAGE  (MEM_LATENCY-1), // must upper than 1
+        .VT_TYPE     (0) // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+    ) u_read_hit_data_bit_en_pipe(
         .clk         (clk  ),
         .rst_n       (rst_n),
         .d           (read_hit_data_bit_en),
