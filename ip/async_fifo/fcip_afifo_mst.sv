@@ -1,4 +1,4 @@
-module afifo_mst #(
+module fcip_afifo_mst #(
     parameter integer unsigned FIFO_DEPTH    = 16,
     parameter integer unsigned DATA_WIDTH    = 16,
     parameter integer unsigned AUTO_CLEAR_EN = 0,

@@ -1,4 +1,4 @@
-module async_fifo #(
+module fcip_afifo #(
     parameter integer unsigned  FIFO_DEPTH      = 16,
     parameter integer unsigned  DATA_WIDTH      = 16,
     parameter integer unsigned  AUTO_CLEAR_EN   = 0,
@@ -36,7 +36,7 @@ logic [FIFO_DEPTH-1:0]   rptr_async;
 logic [FIFO_DEPTH-1:0]   rptr_sync;
 logic [DATA_WIDTH:0]     pld_sync;
 
-afifo_slv #(
+fcip_afifo_slv #(
     .FIFO_DEPTH    (FIFO_DEPTH   ),
     .DATA_WIDTH    (DATA_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
@@ -59,7 +59,7 @@ afifo_slv #(
     .pld_sync      (pld_sync       )
 );
 
-afifo_mst #(
+fcip_afifo_mst #(
     .FIFO_DEPTH    (FIFO_DEPTH   ),
     .DATA_WIDTH    (DATA_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),

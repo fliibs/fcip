@@ -1,4 +1,4 @@
-module mem_fake_2p_mem 
+module fcip_mem_fake_2p_mem 
 #(
     parameter integer unsigned SRAM_ACCESS_LATENCY = 1,
     parameter integer unsigned SRAM_REQ_PIPE_STAGE = 0,
@@ -111,7 +111,7 @@ generate
         assign write_req_rdy    = write_sram_rdy;
 
     end else begin
-        mem_fake_write_buffer #(
+        fcip_mem_fake_write_buffer #(
             .ADDR_WIDTH         (ADDR_WIDTH),
             .DATA_WIDTH         (DATA_WIDTH),
             .WRITE_BUFFER_SIZE  (WRITE_BUFFER_SIZE),

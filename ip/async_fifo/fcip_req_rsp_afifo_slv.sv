@@ -58,7 +58,7 @@ logic                   read_resp_last;
 
 assign req_s_pld_ext = {req_s_pld,req_s_last};
 
-afifo_slv #(
+fcip_afifo_slv #(
     .FIFO_DEPTH     (FIFO_DEPTH),
     .DATA_WIDTH     (REQ_WIDTH+1),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
@@ -83,7 +83,7 @@ afifo_slv #(
 
 // response async fifo mst
 
-afifo_mst #(
+fcip_afifo_mst #(
     .FIFO_DEPTH     (FIFO_DEPTH),
     .DATA_WIDTH     (RSP_WIDTH+1),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),

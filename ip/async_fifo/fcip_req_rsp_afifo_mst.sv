@@ -46,7 +46,7 @@ logic                   rsp_ext_m_last;
 
 // request async fifo mst
 
-afifo_mst #(
+fcip_afifo_mst #(
     .FIFO_DEPTH     (FIFO_DEPTH),
     .DATA_WIDTH     (REQ_WIDTH+1),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
@@ -68,7 +68,7 @@ afifo_mst #(
     .rptr_async     (req_rptr_async),
     .rptr_sync      (req_rptr_sync),
     .pld_sync       (req_pld_sync)
-    );
+);
 
     assign req_s_last   = req_ext_s_pld[0];
     assign req_s_pld    = req_ext_s_pld[REQ_WIDTH:1];
@@ -77,28 +77,28 @@ afifo_mst #(
 
     // response async fifo slv
 
-    afifo_slv #(
-        .FIFO_DEPTH     (FIFO_DEPTH),
-        .DATA_WIDTH     (RSP_WIDTH+1),
-        .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
-        .SYNC_STAGE     (SYNC_STAGE)
-    ) u_rsp_afifo_src(
-        .clk            (clk),
-        .rst_n          (rst_n),
-    
-        .stall          (1'b0),
-        .clear          (1'b0),
-        .full_zero      (),
-    
-        .s_vld          (rsp_ext_m_vld),
-        .s_pld          (rsp_ext_m_pld),
-        .s_rdy          (rsp_ext_m_rdy),
-    
-        .wptr_async     (rsp_wptr_async),
-        .rptr_async     (rsp_rptr_async),
-        .rptr_sync      (rsp_rptr_sync),
-        .pld_sync       (rsp_pld_sync)
-    );
+fcip_afifo_slv #(
+    .FIFO_DEPTH     (FIFO_DEPTH),
+    .DATA_WIDTH     (RSP_WIDTH+1),
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .SYNC_STAGE     (SYNC_STAGE)
+) u_rsp_afifo_src(
+    .clk            (clk),
+    .rst_n          (rst_n),
+
+    .stall          (1'b0),
+    .clear          (1'b0),
+    .full_zero      (),
+
+    .s_vld          (rsp_ext_m_vld),
+    .s_pld          (rsp_ext_m_pld),
+    .s_rdy          (rsp_ext_m_rdy),
+
+    .wptr_async     (rsp_wptr_async),
+    .rptr_async     (rsp_rptr_async),
+    .rptr_sync      (rsp_rptr_sync),
+    .pld_sync       (rsp_pld_sync)
+);
 
     assign rsp_ext_m_vld = rsp_m_vld;
     assign rsp_ext_m_pld = {rsp_m_pld,rsp_m_last};

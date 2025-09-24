@@ -1,4 +1,4 @@
-module mem_fake_write_buffer 
+module fcip_mem_fake_write_buffer 
 #(  parameter integer unsigned ADDR_WIDTH = 8,
     parameter integer unsigned DATA_WIDTH = 128,
     parameter integer unsigned WRITE_BUFFER_SIZE =16 ,
@@ -178,7 +178,7 @@ generate
 
     if(WRITE_BIT_MASK_EN)begin:WRITE_BIT_MASK
 
-        mem_fake_find_new_bit #(
+        fcip_mem_fake_find_new_bit #(
             .ADDR_WIDTH (ADDR_WIDTH),
             .DATA_WIDTH (DATA_WIDTH),
             .WRITE_BUFFER_SIZE(WRITE_BUFFER_SIZE),

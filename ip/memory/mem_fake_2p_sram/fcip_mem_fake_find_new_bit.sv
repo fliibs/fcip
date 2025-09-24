@@ -1,4 +1,4 @@
-module mem_fake_find_new_bit #(
+module fcip_mem_fake_find_new_bit #(
     parameter integer unsigned ADDR_WIDTH = 8,
     parameter integer unsigned DATA_WIDTH = 128,
     parameter integer unsigned WRITE_BUFFER_SIZE =16,
