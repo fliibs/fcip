@@ -160,11 +160,11 @@ generate
 
         assign mem_req_addr         = write_sram_vld ? write_sram_addr : read_req_addr;
         assign mem_req_data         = write_sram_data;
-        assign mem_req_vld          = read_req_vld || write_sram_vld;
+        assign mem_req_vld          = (read_req_vld && read_req_rdy) || (write_sram_vld && write_sram_rdy);
         assign mem_req_opcode       = write_sram_vld ? 1'b1 : 1'b0 ;//wren
         assign mem_req_sideband     = read_req_sideband;
         assign mem_req_bit_en       = write_sram_bit_en;
-
+ 
     end else begin:MEM_FAKE_READ_FIRST
 
         assign read_req_rdy         = ~(fifo_almost_full || stall) && read_out_rdy && mem_req_rdy;
@@ -172,7 +172,7 @@ generate
 
         assign mem_req_addr         = read_req_vld ? read_req_addr : write_sram_addr;
         assign mem_req_data         = write_sram_data;
-        assign mem_req_vld          = read_req_vld || write_sram_vld;
+        assign mem_req_vld          = (read_req_vld && read_req_rdy) || (write_sram_vld && write_sram_rdy);
         assign mem_req_opcode       = read_req_vld ? 1'b0 : write_sram_vld;//wren
         assign mem_req_sideband     = read_req_sideband;
         assign mem_req_bit_en       = write_sram_bit_en;

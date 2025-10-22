@@ -116,9 +116,8 @@ generate
 
 endgenerate
 
-
 /*========================================*/
-/*              s stall               */
+/*              s stall                   */
 /*========================================*/
 
 assign s_gen_rdy = ~full;
@@ -127,9 +126,9 @@ assign s_gen_rdy = ~full;
 /*             Gen full zero              */
 /*========================================*/
 
-assign rd_async_ptr_zero= ( (|wq2_rptr_sync1)==0 ) || ( (&wq2_rptr_sync1) == 1);
-assign wr_ptr_zero      = (|wptr_sync)==0;
-assign full_zero  = rd_async_ptr_zero && wr_ptr_zero;
+assign rd_async_ptr_zero    = ( (|wq2_rptr_sync1)==0 ) || ( (&wq2_rptr_sync1) == 1);
+assign wr_ptr_zero          = wptr_sync== {{(FIFO_DEPTH-1){1'b0}},1'b1};
+assign full_zero            = rd_async_ptr_zero && wr_ptr_zero;
 
 /*========================================*/
 /*              write ptr gen             */
@@ -180,17 +179,33 @@ end
 /*              read ptr sync             */
 /*========================================*/
 
-fcip_sync_cell #(
-    .DATA_WIDTH  (FIFO_DEPTH),
-    .SYN_STAGE   (SYNC_STAGE), // must upper than 1
-    .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
-    .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
-) rptr_sync_cell(
-    .clk         (clk_marker  ),
-    .rst_n       (rst_n),
-    .d           (rptr_async_marker),
-    .q           (wq2_rptr_sync1)
-);
+generate
+    if(SYNC_STAGE==2)begin:SYNC_STAGE_LEVEL_2
+        fcip_sync_cell #(
+            .DATA_WIDTH  (FIFO_DEPTH),
+            .SYN_STAGE   (2), // must upper than 1
+            .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+            .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+        ) rptr_sync_cell(
+            .clk         (clk_marker  ),
+            .rst_n       (rst_n),
+            .d           (rptr_async_marker),
+            .q           (wq2_rptr_sync1)
+        );
+    end else begin:SYNC_STAGE_LEVEL_3
+        fcip_sync_cell #(
+            .DATA_WIDTH  (FIFO_DEPTH),
+            .SYN_STAGE   (3), // must upper than 1
+            .VT_TYPE     (1), // 0: LVT, 1: SVT, 2: ULVT, 7: LVTLL, 8: ULVTLL
+            .RST_VALUE   (0)// 0: sync_arst, 1: sync_aset
+        ) rptr_sync_cell(
+            .clk         (clk_marker  ),
+            .rst_n       (rst_n),
+            .d           (rptr_async_marker),
+            .q           (wq2_rptr_sync1)
+        );
+    end
+endgenerate
 
 /*========================================*/
 /*               ptr compare              */
