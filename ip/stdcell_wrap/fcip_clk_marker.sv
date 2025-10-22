@@ -7,10 +7,13 @@ module fcip_clk_marker #(
     output  logic  Z
 );
 
-    `ifdef ASIC_SIM
+`ifndef SYNTHESIS
         assign Z = I;
-    `elsif  FCIP_STMC_N4P_H280
-        generate 
+`else 
+    `ifdef FPGA_SIM
+        assign Z = I;
+    `elsif FCIP_STMC_N4A_H280
+        generate begin
             if(VT_TYPE == "SVT")begin:u_clk_marker_SVT_H280
                 //todo SIZE_ONLY(.I(I), .Z(Z));
             end
@@ -26,9 +29,13 @@ module fcip_clk_marker #(
             else if(VT_TYPE == "ULVTLL")begin:u_clk_marker_ULVTLL_H280
                 //todo SIZE_ONLY(.I(I), .Z(Z));
             end
+            else begin:u_clk_marker_LVT_H280
+                CKBMZD4BWP210H6P51CNODLVT SIZE_ONLY(.I(I[i]), .Z(Z[i]));
+            end
+        end
         endgenerate
     `else
-        generate 
+        generate begin
             if(VT_TYPE == "SVT")begin:u_clk_marker_SVT_H210
                 //todo SIZE_ONLY(.I(I), .Z(Z));
             end
@@ -44,10 +51,12 @@ module fcip_clk_marker #(
             else if(VT_TYPE == "ULVTLL")begin:u_clk_marker_ULVTLL_H210
                 //todo SIZE_ONLY(.I(I), .Z(Z));
             end
-            else begin
-                CKBMZD4BWP210H6P51CNODLVT SIZE_ONLY (.I(I),.Z(Z));
-            end
+            else begin:u_clk_marker_LVT_H210
+                CKBMZD4BWP210H6P51CNODLVT SIZE_ONLY (.I(I[i]),.Z(Z[i]));
+            end 
+        end
         endgenerate
     `endif
+`endif
 
 endmodule
