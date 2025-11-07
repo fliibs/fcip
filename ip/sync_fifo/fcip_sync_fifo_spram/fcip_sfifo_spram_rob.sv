@@ -53,10 +53,12 @@ logic [PTR_WIDTH:0]     ptr_cnt;
 generate 
     if(FORWARD_EN==1)begin
 
-        logic entry_read_vld;
-        logic direct_forward_en;
-        logic sram_forward_en;
-        logic rob_forward_en;
+        logic                   entry_read_vld;
+        logic                   direct_forward_en;
+        logic                   sram_forward_en;
+        logic                   rob_forward_en;
+        logic                   rob_forward_vld;
+        logic [DATA_WIDTH-1:0]  rob_forward_pld;
         
         assign direct_forward_en= rob_empty && read_rdy;
         assign sram_forward_en  = ram_req_rdy && read_rdy && (ram_req_id==rob_rptr);

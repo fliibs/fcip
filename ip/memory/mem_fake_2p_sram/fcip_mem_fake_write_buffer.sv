@@ -79,6 +79,7 @@ assign write_handshake  = write_req_vld && write_req_rdy;
 assign prealloc_entry   = wr_ptr_true;
 
 assign buffer_empty     = empty;
+assign buffer_full      = full;
 
 /*========================================*/
 /*           Write Trans counter          */

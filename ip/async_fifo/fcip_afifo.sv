@@ -2,7 +2,8 @@ module fcip_afifo #(
     parameter integer unsigned  FIFO_DEPTH      = 16,
     parameter integer unsigned  DATA_WIDTH      = 16,
     parameter integer unsigned  AUTO_CLEAR_EN   = 0,
-    parameter integer unsigned  SYNC_STAGE      = 2
+    parameter integer unsigned  SYNC_STAGE      = 2,
+    parameter integer unsigned  VT_TYPE         = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
 )(
     input  logic                    wclk           ,
     input  logic                    rclk           ,
@@ -40,7 +41,8 @@ fcip_afifo_slv #(
     .FIFO_DEPTH    (FIFO_DEPTH   ),
     .DATA_WIDTH    (DATA_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_slv (
     .clk           (wclk           ),
     .rst_n         (wrst_n         ),
@@ -63,7 +65,8 @@ fcip_afifo_mst #(
     .FIFO_DEPTH    (FIFO_DEPTH   ),
     .DATA_WIDTH    (DATA_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_mst (
     .clk           (rclk           ),
     .rst_n         (rrst_n         ),

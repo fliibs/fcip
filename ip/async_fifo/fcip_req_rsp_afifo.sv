@@ -4,6 +4,7 @@ module fcip_req_rsp_afifo #(
     parameter integer unsigned AUTO_CLEAR_EN    = 1     ,
     parameter integer unsigned REQ_WIDTH        = 32    ,
     parameter integer unsigned RSP_WIDTH        = 32    ,
+    parameter integer unsigned VT_TYPE          = 1     ,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
     localparam int unsigned PLD_SYNC_WIDTH      = REQ_WIDTH+1
 )(
     input  logic                        clk,
@@ -52,7 +53,8 @@ fcip_req_rsp_afifo_slv #(
     .FIFO_DEPTH    (FIFO_DEPTH),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN ),
     .REQ_WIDTH     (REQ_WIDTH),
-    .RSP_WIDTH     (RSP_WIDTH)
+    .RSP_WIDTH     (RSP_WIDTH),
+    .VT_TYPE       (VT_TYPE      )
 )u_fcip_req_rsp_afifo_slv(
     .clk                (clk),
     .rst_n              (rst_n),
@@ -83,7 +85,8 @@ fcip_req_rsp_afifo_mst #(
     .FIFO_DEPTH     (FIFO_DEPTH   ),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
     .REQ_WIDTH      (REQ_WIDTH    ),
-    .RSP_WIDTH      (RSP_WIDTH    )
+    .RSP_WIDTH      (RSP_WIDTH    ),
+    .VT_TYPE        (VT_TYPE      )
 )u_fcip_req_rsp_afifo_mst(
     .clk                (clk),
     .rst_n              (rst_n),

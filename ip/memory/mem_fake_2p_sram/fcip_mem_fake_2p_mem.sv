@@ -286,7 +286,9 @@ fcip_sync_fifo_reg #(
 
 generate
     if(READ_FORWARD_EN)begin
-        
+
+        logic forward_enable;
+
         assign forward_enable       = read_resp_rdy && read_buffer_empty;
 
         assign read_buffer_in_vld   = read_out_vld && ~forward_enable;

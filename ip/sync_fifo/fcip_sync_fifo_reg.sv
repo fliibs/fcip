@@ -65,6 +65,8 @@ generate
     end
 endgenerate
 
+assign idle = empty; 
+
 /*========================================*/
 /*           read & write counter         */
 /*========================================*/

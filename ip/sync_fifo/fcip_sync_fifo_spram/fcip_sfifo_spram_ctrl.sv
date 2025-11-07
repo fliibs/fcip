@@ -56,6 +56,11 @@ logic                       lut_resp_vld;
 logic [SRAM_GROUP_NUM-1:0]  lut_resp_pld;
 logic                       lut_resp_rdy;
 
+logic                       ram_lut_empty;
+logic                       ram_lut_full;
+
+logic                       lut_full;
+
 /*========================================*/
 /*             sram write alloc           */
 /*========================================*/

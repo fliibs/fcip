@@ -31,6 +31,8 @@ logic [ADDR_WIDTH-1:0] rptr;
 logic [ADDR_WIDTH-1:0] wptr;
 logic [ADDR_WIDTH:0]   ptr_cnt;
 
+logic                  winc,rinc;
+
 /*========================================*/
 /*               write req                */
 /*========================================*/

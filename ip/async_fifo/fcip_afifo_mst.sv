@@ -2,7 +2,8 @@ module fcip_afifo_mst #(
     parameter integer unsigned FIFO_DEPTH    = 16,
     parameter integer unsigned DATA_WIDTH    = 16,
     parameter integer unsigned AUTO_CLEAR_EN = 0,
-    parameter integer unsigned SYNC_STAGE    = 2
+    parameter integer unsigned SYNC_STAGE    = 2,
+    parameter integer unsigned VT_TYPE       = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
 )(
     input  logic                    clk,
     input  logic                    rst_n,
@@ -53,7 +54,7 @@ logic [FIFO_DEPTH-1:0]      wptr_async_marker;
 logic clk_marker;
 
 fcip_clk_marker #(
-    .VT_TYPE("LVT")
+    .VT_TYPE(VT_TYPE)
 ) afifo_mst_rclk_marker(
     .I (clk),
     .Z (clk_marker)
@@ -175,7 +176,7 @@ assign empty = ~(|((rptr_async_inner_SIZE_ONLY ^ rq2_wptr_sync1) & rptr_sync_inn
 /*========================================*/
 
 logic                   reg_slice_vld_r;
-logic [DATA_WIDTH-1:0]  reg_slice_pld_r;
+logic [DATA_WIDTH:0]    reg_slice_pld_r;
 
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
@@ -209,12 +210,12 @@ generate
         assign bubble_en      = ~reg_slice_pld_r[0];
         assign read_resp_mask = stall || bubble_en;
         assign m_vld  = reg_slice_vld_r && ~read_resp_mask;
-        assign m_pld  = reg_slice_pld_r[DATA_WIDTH-1:1];
+        assign m_pld  = reg_slice_pld_r[DATA_WIDTH:1];
 
     end else begin
 
         assign m_vld = reg_slice_vld_r;
-        assign m_pld = reg_slice_pld_r[DATA_WIDTH-1:1];
+        assign m_pld = reg_slice_pld_r[DATA_WIDTH:1];
 
     end
 endgenerate
@@ -224,28 +225,32 @@ endgenerate
 /*========================================*/
 
 fcip_marker #(
-    .DATA_WIDTH ( FIFO_DEPTH )
+    .DATA_WIDTH ( FIFO_DEPTH ),
+    .VT_TYPE    (VT_TYPE)
 ) async_rptr_sync_marker(
     .I          ( rptr_sync_marker_SIZE_ONLY ),
     .Z          ( rptr_sync        )
 );
 
 fcip_marker #(
-    .DATA_WIDTH ( FIFO_DEPTH )
+    .DATA_WIDTH ( FIFO_DEPTH ),
+    .VT_TYPE    (VT_TYPE)
 ) rd_rptr_async_primary_marker(
     .I          ( rptr_async_marker_SIZE_ONLY ),
     .Z          ( rptr_async        )
 );
 
 fcip_marker #(
-    .DATA_WIDTH ( DATA_WIDTH+1 )
+    .DATA_WIDTH ( DATA_WIDTH+1 ),
+    .VT_TYPE    (VT_TYPE)
 ) async_pld_sync_marker(
     .I          ( pld_sync        ),
     .Z          ( pld_sync_marker )
 );
 
 fcip_marker #(
-    .DATA_WIDTH ( FIFO_DEPTH )
+    .DATA_WIDTH ( FIFO_DEPTH ),
+    .VT_TYPE    (VT_TYPE)
 ) async_wptr_async_marker(
     .I          ( wptr_async        ),
     .Z          ( wptr_async_marker )

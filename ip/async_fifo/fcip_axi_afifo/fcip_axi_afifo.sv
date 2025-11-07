@@ -17,6 +17,7 @@ module fcip_axi_afifo #(
     parameter integer unsigned R_FIFO_DEPTH     = 8,
     parameter integer unsigned SYNC_STAGE       = 2,
     parameter integer unsigned AUTO_CLEAR_EN    = 1,
+    parameter integer unsigned VT_TYPE          = 1     ,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
     localparam int unsigned    AW_PAYLOAD_WIDTH = AWUSER_WIDTH + AWID_WIDTH + ADDR_WIDTH + AWLEN_WIDTH +
                                                     4 + //region
                                                     3 + //size
@@ -209,7 +210,8 @@ fcip_axi_afifo_slv #(
     .AR_FIFO_DEPTH  (AR_FIFO_DEPTH),
     .R_FIFO_DEPTH   (R_FIFO_DEPTH ),
     .SYNC_STAGE     (SYNC_STAGE   ),
-    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN)
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .VT_TYPE        (VT_TYPE      )
 )u_fcip_axi_afifo_slv(
     .clk                        (clk_s),
     .rst_n                      (rst_s_n),
@@ -306,7 +308,8 @@ fcip_axi_afifo_mst #(
     .AR_FIFO_DEPTH  (AR_FIFO_DEPTH),
     .R_FIFO_DEPTH   (R_FIFO_DEPTH ),
     .SYNC_STAGE     (SYNC_STAGE   ),
-    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN)
+    .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .VT_TYPE        (VT_TYPE      )
 )u_fcip_axi_afifo_mst(
     .clk                        (clk_m),
     .rst_n                      (rst_m_n),

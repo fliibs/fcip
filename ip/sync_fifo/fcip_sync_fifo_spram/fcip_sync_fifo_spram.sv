@@ -55,6 +55,7 @@ logic                           rob_write_vld;
 logic [DATA_WIDTH-1:0]          rob_write_pld;
 logic                           rob_write_rdy;
 logic [ROB_PTR_WIDTH-1:0]       rob_prealloc_id;
+logic                           rob_empty;
 logic [ROB_PTR_WIDTH-1:0]       sram_pre_alloc_id;
 logic                           sram_req_vld;
 logic [DATA_WIDTH-1:0]          sram_req_pld;
@@ -94,6 +95,7 @@ assign full         = spram_ctrl_full;
 assign almost_full  = spram_ctrl_almost_full;
 assign almost_empty = spram_ctrl_almost_empty;
 
+assign idle         = rob_empty && spram_ctrl_empty;
 /*========================================*/
 /*               write arbiter            */
 /*========================================*/
@@ -229,7 +231,7 @@ fcip_sfifo_spram_rob #(
     .read_pld           (read_resp_pld  ),
     .read_rdy           (read_resp_rdy  ),
 
-    .rob_empty          (      ),
+    .rob_empty          (rob_empty      ),
     .rob_full           (      ),
     .rob_almost_empty   (rob_almost_empty),
     .rob_almost_full    (rob_almost_full ),

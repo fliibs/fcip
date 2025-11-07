@@ -17,6 +17,7 @@ module fcip_axi_afifo_slv #(
     parameter integer unsigned R_FIFO_DEPTH     = 8,
     parameter integer unsigned SYNC_STAGE       = 2,
     parameter integer unsigned AUTO_CLEAR_EN    = 1,
+    parameter integer unsigned VT_TYPE          = 1,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
     localparam int unsigned    AW_PAYLOAD_WIDTH = AWUSER_WIDTH + AWID_WIDTH + ADDR_WIDTH +
                                 4 + //region
                                 8 + //length
@@ -160,7 +161,6 @@ logic [R_PAYLOAD_WIDTH-1:0]     r_pld_s;
 //aw pld pack
 typedef struct packed{
     logic [ADDR_WIDTH-1:0]      addr;
-    logic [DATA_WIDTH-1:0]      data;
     logic [AWID_WIDTH-1:0]      id;
     logic [AWUSER_WIDTH-1:0]    user;
     logic [AWLEN_WIDTH-1:0]     len;
@@ -192,7 +192,6 @@ assign aw_pld_s                 = aw_pld_s_pack;
 //ar pld pack
 typedef struct packed{
     logic [ADDR_WIDTH-1:0]      addr;
-    logic [DATA_WIDTH-1:0]      data;
     logic [ARID_WIDTH-1:0]      id;
     logic [ARUSER_WIDTH-1:0]    user;
     logic [ARLEN_WIDTH-1:0]     len;
@@ -282,7 +281,8 @@ fcip_afifo_slv #(
     .FIFO_DEPTH    (AW_FIFO_DEPTH   ),
     .DATA_WIDTH    (AW_PAYLOAD_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_aw_chnl_slv (
     .clk           (clk           ),
     .rst_n         (rst_n         ),
@@ -311,7 +311,8 @@ fcip_afifo_slv #(
     .FIFO_DEPTH    (W_FIFO_DEPTH   ),
     .DATA_WIDTH    (W_PAYLOAD_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_w_chnl_slv (
     .clk           (clk           ),
     .rst_n         (rst_n         ),
@@ -341,7 +342,8 @@ fcip_afifo_mst #(
     .FIFO_DEPTH    (B_FIFO_DEPTH   ),
     .DATA_WIDTH    (B_PAYLOAD_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_b_chnl_mst (
     .clk           (clk           ),
     .rst_n         (rst_n         ),
@@ -371,7 +373,8 @@ fcip_afifo_slv #(
     .FIFO_DEPTH    (AR_FIFO_DEPTH   ),
     .DATA_WIDTH    (AR_PAYLOAD_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_ar_chnl_slv (
     .clk           (clk           ),
     .rst_n         (rst_n         ),
@@ -401,7 +404,8 @@ fcip_afifo_mst #(
     .FIFO_DEPTH    (R_FIFO_DEPTH   ),
     .DATA_WIDTH    (R_PAYLOAD_WIDTH   ),
     .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   )
+    .SYNC_STAGE    (SYNC_STAGE   ),
+    .VT_TYPE       (VT_TYPE      )
 ) u_afifo_r_chnl_mst (
     .clk           (clk           ),
     .rst_n         (rst_n         ),
