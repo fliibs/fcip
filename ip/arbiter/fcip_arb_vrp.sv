@@ -39,7 +39,7 @@ generate
         logic [PLD_WIDTH-1:0]   pld_m_r;
 
         assign vld_m   = vld_m_r || m_vld;
-        assign pld_m   = pld_m_r ? pld_m_r : m_pld;
+        assign pld_m   = vld_m_r ? pld_m_r : m_pld;
 
         always @(posedge clk or negedge rst_n) begin 
             if(~rst_n)                vld_m_r  <= 1'b0;
