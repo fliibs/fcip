@@ -1,9 +1,9 @@
 $COMMON_IP_PATH/rtl/others/cmn_list_lead_one.sv
-//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full.sv
-//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full_set.sv
-//$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
-//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_backward.sv
-//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_forward.sv
+$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full.sv
+$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full_set.sv
+$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
+$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_backward.sv
+$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_forward.sv
 $COMMON_IP_PATH/rtl/others/cmn_lead_one_msb.sv
 $COMMON_IP_PATH/rtl/others/cmn_ip_mimo_queue.sv
 $COMMON_IP_PATH/rtl/others/cmn_rob_prealloc.sv

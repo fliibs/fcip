@@ -27,7 +27,7 @@ module cmn_reg_slice_backward #(
     end 
 
     always @(posedge clk) begin 
-        else if(s_vld && ~vld_r && ~m_rdy)      pld_r <= s_pld;
+        if(s_vld && ~vld_r && ~m_rdy)      pld_r <= s_pld;
     end 
 
     always @(posedge clk or negedge rst_n) begin 
