@@ -1,3 +1,7 @@
+`ifndef _PREFIX_
+    `define _PREFIX_(x) x
+`endif
+
 module `_PREFIX_({{module_name}}) #(
     parameter integer unsigned CTRL_BUS_IN_WIDTH     = 16,
     parameter integer unsigned CTRL_BUS_OUT_WIDTH    = 16
@@ -5,7 +9,7 @@ module `_PREFIX_({{module_name}}) #(
     input  logic {{paddings.logic}}            clk,
     // Port A
     input  logic {{paddings.logic}}            wr_en,
-    input  logic {{paddings.logic}}            wr_biten,
+    input  logic {{data_range}}{{paddings.data}}             wr_bit_en,
     input  logic {{addr_range}}{{paddings.addr}}             wr_addr,
     input  logic {{data_range}}{{paddings.data}}             wr_data,
 
@@ -33,21 +37,14 @@ module `_PREFIX_({{module_name}}) #(
                 .ADDR_WIDTH(ADDR_WIDTH),
                 .DATA_WIDTH(DATA_WIDTH)
             ) u_fcip_dpram_model (
-                // Port A
-                .clka           (clk        ),
-                .ena            (wr_en      ),
-                .addra          (wr_addr    ),
-                .rd_dataa       (           ),
-                .wr_dataa       (wr_data    ),
-                .wr_ena         (wr_en      ),
-
-                // Port B
-                .clkb           (clk        ),
-                .enb            (rd_en      ),
-                .addrb          (rd_addr    ),
-                .rd_datab       (rd_data    ),
-                .wr_datab       ('b0        ),
-                .wr_enb         (1'b0       )
+                .clk(clk),
+                .rd_en(rd_en),
+                .rd_addr(rd_addr),
+                .rd_data(rd_data),
+                .wr_en(wr_en),
+                .wr_bit_en(wr_bit_en),
+                .wr_addr(wr_addr),
+                .wr_data(wr_data)
             );
         `endif
     `endif

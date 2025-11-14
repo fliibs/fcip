@@ -1,0 +1,23 @@
+// Hex file for SPRAM test - 1024x32 memory
+// First 10 entries with test patterns
+
+@0
+0x12345678
+@1
+0x9ABCDEF0
+@2
+0xFEDCBA98
+@3
+0x11223344
+@4
+0x55667788
+@5
+0x99AABBCC
+@6
+0xDEADBEEF
+@7
+0xCAFEBABE
+@8
+0x12121212
+@9
+0x34343434

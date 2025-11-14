@@ -58,6 +58,9 @@ def generate_mem_verilog(mem_type, depth, width, output_dir, prefix):
 
     template = Template(template_content)
     
+    # Generate argparse_key based on module_name
+    argparse_key = f'"{module_name.upper()}"'
+    
     render_context = {
         "prefix": prefix,
         "module_name": module_name,
@@ -66,6 +69,7 @@ def generate_mem_verilog(mem_type, depth, width, output_dir, prefix):
         "addr_width": addr_width,
         "sram_width": width, # for compatibility with spram template
         "type_upper": type_upper,
+        "argparse_key": argparse_key,
         "paddings": paddings
     }
 
