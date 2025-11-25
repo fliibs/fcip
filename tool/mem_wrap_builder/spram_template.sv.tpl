@@ -1,5 +1,11 @@
+
+
+`ifndef _PREFIX_
+    `define _PREFIX_(x) x
+`endif
+
 module `_PREFIX_({{module_name}}) #(
-    parameter integer unsigned CTRL_BUS_IN_WIDTH     = 16,
+    parameter integer unsigned CTRL_BUS_IN_WIDTH     = 16    ,
     parameter integer unsigned CTRL_BUS_OUT_WIDTH    = 16
 )(
     input  logic {{paddings.logic}}             clk,
@@ -7,8 +13,8 @@ module `_PREFIX_({{module_name}}) #(
     input  logic {{addr_range}}{{paddings.addr}}              addr,
     output logic {{data_range}}{{paddings.data}}              rd_data,
     input  logic {{data_range}}{{paddings.data}}              wr_data,
-    input  logic {{paddings.logic}}             wr_bit_en,
-    input  logic {{paddings.logic}}             wr_en
+    input  logic {{data_range}}{{paddings.data}}              wr_bit_en,
+    input  logic {{paddings.logic}}             wr_en,
 
     // Control Signal
     input  logic [CTRL_BUS_IN_WIDTH  -1:0]      ctrl_bus_in    ,
@@ -25,6 +31,8 @@ module `_PREFIX_({{module_name}}) #(
             `{{type_upper}}_INST
         `else
             fcip_spram_model #(
+                .ARGPARSE_KEY({{argparse_key}}),
+                .ALLOW_NO_HEX(1),
                 .ADDR_WIDTH(ADDR_WIDTH),
                 .DATA_WIDTH(DATA_WIDTH)
             ) u_fcip_spram_model (
@@ -33,6 +41,7 @@ module `_PREFIX_({{module_name}}) #(
                 .addr(addr),
                 .rd_data(rd_data),
                 .wr_data(wr_data),
+                .wr_bit_en(wr_bit_en),
                 .wr_en(wr_en)
             );
 
