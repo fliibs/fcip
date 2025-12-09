@@ -1,9 +1,11 @@
 module fcip_afifo_slv #(
-    parameter integer unsigned  FIFO_DEPTH = 16,
-    parameter integer unsigned  DATA_WIDTH = 16,
-    parameter integer unsigned  AUTO_CLEAR_EN  = 0,
-    parameter integer unsigned  SYNC_STAGE = 2,
-    parameter integer unsigned  VT_TYPE    = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
+    parameter integer unsigned  FIFO_DEPTH              = 16,
+    parameter integer unsigned  DATA_WIDTH              = 16,
+    parameter integer unsigned  AUTO_CLEAR_EN           = 0,
+    parameter integer unsigned  THRESHOLD_EN            = 1,
+    parameter integer unsigned  ALMOST_FULL_THRESHOLD   = 12,
+    parameter integer unsigned  SYNC_STAGE              = 2,
+    parameter integer unsigned  VT_TYPE                 = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
 )(
     input  logic                    clk,
     input  logic                    rst_n,
@@ -18,6 +20,9 @@ module fcip_afifo_slv #(
     input  logic [DATA_WIDTH-1:0]   s_pld,
     output logic                    s_rdy,
 
+    //threshold port
+    output logic                    almost_full,
+
     //control signals
     output logic [FIFO_DEPTH-1:0]   wptr_async,
 
@@ -25,6 +30,8 @@ module fcip_afifo_slv #(
     input  logic [FIFO_DEPTH-1:0]   rptr_sync,
     output logic [DATA_WIDTH:0]     pld_sync  //DATA_WIDTH+1,used for entry vld
 );
+
+localparam int unsigned PTR_WIDTH = $clog2(FIFO_DEPTH);
 
 logic                   full;
 logic                   s_handshake;
@@ -213,6 +220,52 @@ endgenerate
 /*========================================*/
 
 assign full = |((wptr_async_inner_SIZE_ONLY ^ wq2_rptr_sync1) & wptr_sync);
+
+/*========================================*/
+/*           Generate threshold           */
+/*========================================*/
+
+generate 
+    if(THRESHOLD_EN) begin:THRESHOLD_EN_OPEN
+
+        logic [FIFO_DEPTH-1:0]   wq2_rptr_r;
+        logic                    rinc_fake;
+        logic [PTR_WIDTH:0]      ptr_cnt;
+
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
+            if(~rst_n)
+                wq2_rptr_r <= {(FIFO_DEPTH){1'b0}};
+            else
+                wq2_rptr_r <= wq2_rptr_sync1;
+        end
+
+        assign rinc_fake = |(wq2_rptr_r ^ wq2_rptr_sync1);
+
+        always_ff @( posedge clk or negedge rst_n ) begin
+            if(~rst_n)
+                ptr_cnt <= 'b0;
+            else if(winc && rinc_fake)
+                ptr_cnt <= ptr_cnt;
+            else if(winc)
+                ptr_cnt <= ptr_cnt + 1'b1;
+            else if(rinc_fake)
+                ptr_cnt <= ptr_cnt - 1'b1;
+        end
+
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
+            if(~rst_n)
+                almost_full <= 'b0;
+            else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
+                almost_full <= 1'b1;
+            else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && winc && ~rinc_fake)
+                almost_full <= 1'b1;
+            else 
+                almost_full <= 1'b0;
+        end
+    end else begin
+        assign almost_full  = 1'b0;
+    end
+endgenerate
 
 /*========================================*/
 /*               Reg entry                */

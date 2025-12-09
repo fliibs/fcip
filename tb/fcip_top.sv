@@ -714,10 +714,13 @@ fcip_mtx_gen_plru_tree #(
 
 // fcip_afifo instance
 fcip_afifo #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo (
     .wclk           (fcip_afifo_wclk),
     .rclk           (fcip_afifo_rclk),
@@ -730,6 +733,8 @@ fcip_afifo #(
     .read_full_zero (fcip_afifo_read_full_zero),
     .write_full_zero(fcip_afifo_write_full_zero),
     .read_idle      (fcip_afifo_read_idle),
+    .almost_empty   (),
+    .almost_full    (),
     .s_vld          (fcip_afifo_s_vld),
     .s_pld          (fcip_afifo_s_pld),
     .s_rdy          (fcip_afifo_s_rdy),
@@ -740,32 +745,37 @@ fcip_afifo #(
 
 // fcip_afifo_mst instance
 fcip_afifo_mst #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo_mst (
-    .clk        (clk),
-    .rst_n      (rst_n),
-    .stall      (fcip_afifo_mst_stall),
-    .clear      (fcip_afifo_mst_clear),
-    .full_zero  (fcip_afifo_mst_full_zero),
-    .idle       (fcip_afifo_mst_idle),
-    .m_vld      (fcip_afifo_mst_m_vld),
-    .m_pld      (fcip_afifo_mst_m_pld),
-    .m_rdy      (fcip_afifo_mst_m_rdy),
-    .wptr_async (fcip_afifo_mst_wptr_async),
-    .rptr_async (fcip_afifo_mst_rptr_async),
-    .rptr_sync  (fcip_afifo_mst_rptr_sync),
-    .pld_sync   (fcip_afifo_mst_pld_sync)
+    .clk         (clk),
+    .rst_n       (rst_n),
+    .stall       (fcip_afifo_mst_stall),
+    .clear       (fcip_afifo_mst_clear),
+    .full_zero   (fcip_afifo_mst_full_zero),
+    .idle        (fcip_afifo_mst_idle),
+    .m_vld       (fcip_afifo_mst_m_vld),
+    .m_pld       (fcip_afifo_mst_m_pld),
+    .m_rdy       (fcip_afifo_mst_m_rdy),
+    .almost_empty(),
+    .wptr_async  (fcip_afifo_mst_wptr_async),
+    .rptr_async  (fcip_afifo_mst_rptr_async),
+    .rptr_sync   (fcip_afifo_mst_rptr_sync),
+    .pld_sync    (fcip_afifo_mst_pld_sync)
 );
 
 // fcip_afifo_slv instance
 fcip_afifo_slv #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo_slv (
     .clk        (clk),
     .rst_n      (rst_n),
@@ -775,6 +785,7 @@ fcip_afifo_slv #(
     .s_vld      (fcip_afifo_slv_s_vld),
     .s_pld      (fcip_afifo_slv_s_pld),
     .s_rdy      (fcip_afifo_slv_s_rdy),
+    .almost_full(),
     .wptr_async (fcip_afifo_slv_wptr_async),
     .rptr_async (fcip_afifo_slv_rptr_async),
     .rptr_sync  (fcip_afifo_slv_rptr_sync),

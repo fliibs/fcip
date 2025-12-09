@@ -1,9 +1,12 @@
 module fcip_afifo #(
-    parameter integer unsigned  FIFO_DEPTH      = 16,
-    parameter integer unsigned  DATA_WIDTH      = 16,
-    parameter integer unsigned  AUTO_CLEAR_EN   = 0,
-    parameter integer unsigned  SYNC_STAGE      = 2,
-    parameter integer unsigned  VT_TYPE         = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
+    parameter integer unsigned  FIFO_DEPTH              = 16,
+    parameter integer unsigned  DATA_WIDTH              = 16,
+    parameter integer unsigned  AUTO_CLEAR_EN           = 0,
+    parameter integer unsigned  THRESHOLD_EN            = 0,
+    parameter integer unsigned  ALMOST_FULL_THRESHOLD   = 12,
+    parameter integer unsigned  ALMOST_EMPTY_THRESHOLD  = 4,
+    parameter integer unsigned  SYNC_STAGE              = 2,
+    parameter integer unsigned  VT_TYPE                 = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
 )(
     input  logic                    wclk           ,
     input  logic                    rclk           ,
@@ -20,6 +23,10 @@ module fcip_afifo #(
     output logic                    write_full_zero,
 
     output logic                    read_idle           ,
+
+    //threshold port
+    output logic                    almost_empty,
+    output logic                    almost_full,
 
     //s port
     input  logic                    s_vld  ,
@@ -38,11 +45,13 @@ logic [FIFO_DEPTH-1:0]   rptr_sync;
 logic [DATA_WIDTH:0]     pld_sync;
 
 fcip_afifo_slv #(
-    .FIFO_DEPTH    (FIFO_DEPTH   ),
-    .DATA_WIDTH    (DATA_WIDTH   ),
-    .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   ),
-    .VT_TYPE       (VT_TYPE      )
+    .FIFO_DEPTH             (FIFO_DEPTH   ),
+    .DATA_WIDTH             (DATA_WIDTH   ),
+    .AUTO_CLEAR_EN          (AUTO_CLEAR_EN),
+    .THRESHOLD_EN           (THRESHOLD_EN ),
+    .ALMOST_FULL_THRESHOLD  (ALMOST_FULL_THRESHOLD),
+    .SYNC_STAGE             (SYNC_STAGE   ),
+    .VT_TYPE                (VT_TYPE      )
 ) u_afifo_slv (
     .clk           (wclk           ),
     .rst_n         (wrst_n         ),
@@ -55,6 +64,8 @@ fcip_afifo_slv #(
     .s_pld         (s_pld          ),
     .s_rdy         (s_rdy          ),
 
+    .almost_full   (almost_full    ),
+
     .wptr_async    (wptr_async     ),
     .rptr_async    (rptr_async     ),
     .rptr_sync     (rptr_sync      ),
@@ -62,11 +73,13 @@ fcip_afifo_slv #(
 );
 
 fcip_afifo_mst #(
-    .FIFO_DEPTH    (FIFO_DEPTH   ),
-    .DATA_WIDTH    (DATA_WIDTH   ),
-    .AUTO_CLEAR_EN (AUTO_CLEAR_EN),
-    .SYNC_STAGE    (SYNC_STAGE   ),
-    .VT_TYPE       (VT_TYPE      )
+    .FIFO_DEPTH             (FIFO_DEPTH   ),
+    .DATA_WIDTH             (DATA_WIDTH   ),
+    .AUTO_CLEAR_EN          (AUTO_CLEAR_EN),
+    .THRESHOLD_EN           (THRESHOLD_EN ),
+    .ALMOST_EMPTY_THRESHOLD (ALMOST_EMPTY_THRESHOLD),
+    .SYNC_STAGE             (SYNC_STAGE   ),
+    .VT_TYPE                (VT_TYPE      )
 ) u_afifo_mst (
     .clk           (rclk           ),
     .rst_n         (rrst_n         ),
@@ -79,6 +92,8 @@ fcip_afifo_mst #(
     .m_vld         (m_vld          ),
     .m_pld         (m_pld          ),
     .m_rdy         (m_rdy          ),
+
+    .almost_empty  (almost_empty   ),
 
     .wptr_async    (wptr_async     ),
     .rptr_async    (rptr_async     ),
