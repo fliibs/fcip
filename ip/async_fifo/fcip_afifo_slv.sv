@@ -241,7 +241,7 @@ generate
 
         assign rinc_fake = |(wq2_rptr_r ^ wq2_rptr_sync1);
 
-        always_ff @( posedge clk or negedge rst_n ) begin
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
             if(~rst_n)
                 ptr_cnt <= 'b0;
             else if(winc && rinc_fake)

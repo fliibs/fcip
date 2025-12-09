@@ -198,7 +198,7 @@ generate
 
         assign winc_fake = |(rq2_wptr_r ^ rq2_wptr_sync1);
 
-        always_ff @( posedge clk or negedge rst_n ) begin
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
             if(~rst_n)
                 ptr_cnt <= 'b0;
             else if(rinc && winc_fake)
@@ -209,7 +209,7 @@ generate
                 ptr_cnt <= ptr_cnt - 1'b1;
         end
 
-        always_ff @( posedge clk or negedge rst_n ) begin
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
             if(~rst_n)
                 almost_empty <= 'b0;
             else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
