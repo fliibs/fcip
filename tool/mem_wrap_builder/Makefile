@@ -24,7 +24,7 @@ verilator_test: spram dpram
 		../../ip/mem_model/fcip_spram_model.sv \
 		--top-module spram_1024x32 \
 		-Wno-DECLFILENAME \
-		-Wno-UNUSED
+		-Wno-UNUSED +define+USE_CUST_MEM_MACRO
 	@echo "SPRAM Verilator check passed!"
 	@echo "Running Verilator syntax check for DPRAM..."
 	verilator --lint-only --timing -sv \
