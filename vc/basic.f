@@ -11,3 +11,5 @@ $FCIP_DIR/ip/basic/fcip_onehot2bin.sv
 $FCIP_DIR/ip/basic/fcip_real_mux_onehot.sv
 $FCIP_DIR/ip/basic/fcip_rob_id_dec.sv
 $FCIP_DIR/ip/basic/fcip_rob_prealloc.sv
+$FCIP_DIR/ip/basic/fcip_onehot_demux.sv
+

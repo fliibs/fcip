@@ -2,6 +2,8 @@ module fcip_afifo_mst #(
     parameter integer unsigned FIFO_DEPTH    = 16,
     parameter integer unsigned DATA_WIDTH    = 16,
     parameter integer unsigned AUTO_CLEAR_EN = 0,
+    parameter integer unsigned THRESHOLD_EN            = 1,
+    parameter integer unsigned ALMOST_EMPTY_THRESHOLD  = 4,
     parameter integer unsigned SYNC_STAGE    = 2,
     parameter integer unsigned VT_TYPE       = 1 // 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
 )(
@@ -18,12 +20,17 @@ module fcip_afifo_mst #(
     output logic [DATA_WIDTH-1:0]   m_pld,
     input  logic                    m_rdy,
 
+    //threshold port
+    output logic                    almost_empty,
+
     //control signals
     input  logic [FIFO_DEPTH-1:0]   wptr_async,
     output logic [FIFO_DEPTH-1:0]   rptr_async,
     output logic [FIFO_DEPTH-1:0]   rptr_sync,
     input  logic [DATA_WIDTH:0]     pld_sync  //DATA_WIDTH+1,used for entry vld
 );
+
+localparam int unsigned PTR_WIDTH = $clog2(FIFO_DEPTH);
 
 logic                       empty;
 logic                       rinc;
@@ -170,6 +177,53 @@ endgenerate
 /*========================================*/
 
 assign empty = ~(|((rptr_async_inner_SIZE_ONLY ^ rq2_wptr_sync1) & rptr_sync_inner_SIZE_ONLY));
+
+/*========================================*/
+/*           Generate threshold           */
+/*========================================*/
+
+generate 
+    if(THRESHOLD_EN) begin:THRESHOLD_EN_OPEN
+
+        logic [FIFO_DEPTH-1:0]   rq2_wptr_r;
+        logic                    winc_fake;
+        logic [PTR_WIDTH:0]      ptr_cnt;
+
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
+            if(~rst_n)
+                rq2_wptr_r <= {(FIFO_DEPTH){1'b0}};
+            else
+                rq2_wptr_r <= rq2_wptr_sync1;
+        end
+
+        assign winc_fake = |(rq2_wptr_r ^ rq2_wptr_sync1);
+
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
+            if(~rst_n)
+                ptr_cnt <= 'b0;
+            else if(rinc && winc_fake)
+                ptr_cnt <= ptr_cnt;
+            else if(rinc)
+                ptr_cnt <= ptr_cnt + 1'b1;
+            else if(winc_fake)
+                ptr_cnt <= ptr_cnt - 1'b1;
+        end
+
+        always_ff @( posedge clk_marker or negedge rst_n ) begin
+            if(~rst_n)
+                almost_empty <= 'b0;
+            else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
+                almost_empty <= 1'b1;
+            else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD-1)) && rinc && ~winc_fake)
+                almost_empty <= 1'b1;
+            else 
+                almost_empty <= 1'b0;
+        end
+    end else begin
+        assign almost_empty  = 1'b0;
+    end
+endgenerate
+
 
 /*========================================*/
 /*         read response reg slice        */

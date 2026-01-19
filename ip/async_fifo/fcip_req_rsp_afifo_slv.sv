@@ -63,6 +63,7 @@ fcip_afifo_slv #(
     .FIFO_DEPTH     (FIFO_DEPTH),
     .DATA_WIDTH     (REQ_WIDTH+1),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .THRESHOLD_EN   (0),
     .SYNC_STAGE     (SYNC_STAGE),
     .VT_TYPE        (VT_TYPE      )
 ) u_afifo_slv(
@@ -77,6 +78,8 @@ fcip_afifo_slv #(
     .s_pld          (req_s_pld_ext),
     .s_rdy          (req_s_rdy),
 
+    .almost_full    (),
+
     .wptr_async     (req_wptr_async),
     .rptr_async     (req_rptr_async),
     .rptr_sync      (req_rptr_sync),
@@ -89,6 +92,7 @@ fcip_afifo_mst #(
     .FIFO_DEPTH     (FIFO_DEPTH),
     .DATA_WIDTH     (RSP_WIDTH+1),
     .AUTO_CLEAR_EN  (AUTO_CLEAR_EN),
+    .THRESHOLD_EN   (0),
     .SYNC_STAGE     (SYNC_STAGE),
     .VT_TYPE        (VT_TYPE      )
 ) u_afifo_mst(
@@ -103,6 +107,8 @@ fcip_afifo_mst #(
     .m_vld          (read_resp_vld),
     .m_pld          (read_resp_pld),
     .m_rdy          (read_resp_rdy),
+
+    .almost_empty   (),
 
     .wptr_async     (rsp_wptr_async),
     .rptr_async     (rsp_rptr_async),

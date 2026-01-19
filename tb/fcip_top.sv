@@ -370,7 +370,16 @@ module fcip_top (
     input  logic         fcip_rob_prealloc_out_rdy,
     output logic [4:0]   fcip_rob_prealloc_out_pld,
     output logic [31:0]  fcip_rob_prealloc_out_pld_oh,
-    
+    // ============================================================
+    // fcip_onehot_demux ports
+    // ============================================================
+    input  logic         fcip_onehot_demux_s_vld,
+    output logic         fcip_onehot_demux_s_rdy,
+    input  logic [31:0]  fcip_onehot_demux_s_pld,
+    input  logic [3:0]   fcip_onehot_demux_sel_onehot,
+    output logic [3:0]   fcip_onehot_demux_v_m_vld,
+    input  logic [3:0]   fcip_onehot_demux_v_m_rdy,
+    output logic [31:0]  fcip_onehot_demux_v_m_pld [3:0],
     // ============================================================
     // fcip_ip_mimo_queue ports
     // ============================================================
@@ -705,10 +714,13 @@ fcip_mtx_gen_plru_tree #(
 
 // fcip_afifo instance
 fcip_afifo #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo (
     .wclk           (fcip_afifo_wclk),
     .rclk           (fcip_afifo_rclk),
@@ -721,6 +733,8 @@ fcip_afifo #(
     .read_full_zero (fcip_afifo_read_full_zero),
     .write_full_zero(fcip_afifo_write_full_zero),
     .read_idle      (fcip_afifo_read_idle),
+    .almost_empty   (),
+    .almost_full    (),
     .s_vld          (fcip_afifo_s_vld),
     .s_pld          (fcip_afifo_s_pld),
     .s_rdy          (fcip_afifo_s_rdy),
@@ -731,32 +745,37 @@ fcip_afifo #(
 
 // fcip_afifo_mst instance
 fcip_afifo_mst #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo_mst (
-    .clk        (clk),
-    .rst_n      (rst_n),
-    .stall      (fcip_afifo_mst_stall),
-    .clear      (fcip_afifo_mst_clear),
-    .full_zero  (fcip_afifo_mst_full_zero),
-    .idle       (fcip_afifo_mst_idle),
-    .m_vld      (fcip_afifo_mst_m_vld),
-    .m_pld      (fcip_afifo_mst_m_pld),
-    .m_rdy      (fcip_afifo_mst_m_rdy),
-    .wptr_async (fcip_afifo_mst_wptr_async),
-    .rptr_async (fcip_afifo_mst_rptr_async),
-    .rptr_sync  (fcip_afifo_mst_rptr_sync),
-    .pld_sync   (fcip_afifo_mst_pld_sync)
+    .clk         (clk),
+    .rst_n       (rst_n),
+    .stall       (fcip_afifo_mst_stall),
+    .clear       (fcip_afifo_mst_clear),
+    .full_zero   (fcip_afifo_mst_full_zero),
+    .idle        (fcip_afifo_mst_idle),
+    .m_vld       (fcip_afifo_mst_m_vld),
+    .m_pld       (fcip_afifo_mst_m_pld),
+    .m_rdy       (fcip_afifo_mst_m_rdy),
+    .almost_empty(),
+    .wptr_async  (fcip_afifo_mst_wptr_async),
+    .rptr_async  (fcip_afifo_mst_rptr_async),
+    .rptr_sync   (fcip_afifo_mst_rptr_sync),
+    .pld_sync    (fcip_afifo_mst_pld_sync)
 );
 
 // fcip_afifo_slv instance
 fcip_afifo_slv #(
-    .FIFO_DEPTH    (16),
-    .DATA_WIDTH    (16),
-    .AUTO_CLEAR_EN (0),
-    .SYNC_STAGE    (2)
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .SYNC_STAGE             (2)
 ) u_fcip_afifo_slv (
     .clk        (clk),
     .rst_n      (rst_n),
@@ -766,6 +785,7 @@ fcip_afifo_slv #(
     .s_vld      (fcip_afifo_slv_s_vld),
     .s_pld      (fcip_afifo_slv_s_pld),
     .s_rdy      (fcip_afifo_slv_s_rdy),
+    .almost_full(),
     .wptr_async (fcip_afifo_slv_wptr_async),
     .rptr_async (fcip_afifo_slv_rptr_async),
     .rptr_sync  (fcip_afifo_slv_rptr_sync),
@@ -1082,7 +1102,19 @@ fcip_rob_prealloc #(
     .out_pld   (fcip_rob_prealloc_out_pld),
     .out_pld_oh(fcip_rob_prealloc_out_pld_oh)
 );
-
+    // fcip_onehot_demux instance
+    fcip_onehot_demux #(
+        .WIDTH    (4),
+        .PLD_TYPE (logic [31:0])
+    ) u_fcip_onehot_demux (
+        .s_vld      (fcip_onehot_demux_s_vld),
+        .s_rdy      (fcip_onehot_demux_s_rdy),
+        .s_pld      (fcip_onehot_demux_s_pld),
+        .sel_onehot (fcip_onehot_demux_sel_onehot),
+        .v_m_vld    (fcip_onehot_demux_v_m_vld),
+        .v_m_rdy    (fcip_onehot_demux_v_m_rdy),
+        .v_m_pld    (fcip_onehot_demux_v_m_pld)
+    );
 // fcip_ip_mimo_queue instance
 fcip_ip_mimo_queue #(
     .DEPTH    (128),
