@@ -1,12 +1,9 @@
 
-
 # fcip_mem_spram_fake_2p
 
 这个模块对外提供一读一写两个端口，两个端口都是valid/ready握手接口。
 
 这个模块使用单口SRAM，在不MCP时，最大读写带宽也仅有1 R/W per cycle，为了缓解峰值带宽冲突问题，内置store buffer，用于缓冲写数据。
-
-
 
 ## Parameter 
 
