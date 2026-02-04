@@ -1,249 +1,961 @@
-# fcip_sync_fifo_spram 设计规格书（Design Specification）
+# 基于SPRAM的同步FIFO设计规范
+
+## 文档信息
+
+| 项目 | 描述 |
+|------|-------------|
+| 文档标题 | 基于SPRAM的同步FIFO设计规范 |
+| 模块名称 | fcip_sync_fifo_spram |
+| 版本 | 1.0 |
+| 日期 | 2026年2月3日 |
+| 作者 | jiaoyadi |
 
 ## 1. 概述
 
-`fcip_sync_fifo_spram` 是一个**单时钟域同步 FIFO** 的 SRAM 化实现：在功能层面与 `fcip_sync_fifo_reg` 等价（valid/ready 语义的顺序入队/出队、almost_full/empty 等），但其存储体使用一个或多个 SRAM 组（SPRAM）以获得更优的面积与可扩展性。
-
-由于 SRAM 读写访问具有固定延迟且在物理实现上可能存在 MCP（multi-cycle path）与额外 pipeline 的需求，本模块采用“分层控制”的方式实现：
-
-- **SRAM 访问控制器**：将 FIFO 的逻辑读写转换为对多个 SRAM 组的读写请求，并通过 LUT 维护每条 FIFO entry 存放在哪个 SRAM 组。
-- **ROB（Reorder Buffer）**：用于在 SRam 读数据返回存在延迟时仍保持 FIFO 的顺序输出，并在可选配置下提供 forwarding 以实现 0-cycle 额外延迟的读通路。
-- **Memory Wrapper**：每个 SRAM 组通过 `fcip_mem_ctrl_wrap` 进行请求/返回 pipeline 与 MCP 反压处理。
-
-## 2. 参考资料
-
-- Memory wrapper：`fcip_mem_ctrl_wrap.md`
-- RTL
-  - `fcip_sync_fifo_spram.sv`
-  - `fcip_sfifo_spram_ctrl.sv`
-  - `fcip_sfifo_spram_ptr_ctrl.sv`
-  - `fcip_sfifo_spram_rob.sv`
-
-## 3. 模块边界与外部可见行为
-
-### 3.1 FIFO 语义
-
-- 写端：`write_req_vld/write_req_rdy` 握手成功时，将 `write_req_pld` 入队。
-- 读端：当 FIFO 非空且内部数据可用时对外拉高 `read_resp_vld`；`read_resp_vld && read_resp_rdy` 握手成功时出队并消费该条目。
-- 顺序性：读出的数据顺序与写入顺序一致。
-
-### 3.2 延迟特性（概念性说明）
-
-- 使用 SRAM 实现时，读数据通常在发起 SRAM read 后经过若干拍返回；因此本模块内部通过 ROB 维持输出次序。
-- 若配置 `FORWARD_EN=1`，模块在部分场景可将数据直接 forward 到输出，从而将功能 FIFO 的额外延迟降低至 0（但会引入输入到输出的组合/短路径，需关注时序）。
-
-> 注：具体延迟由 `SRAM_ACCESS_LATENCY/SRAM_REQ_PIPE_STAGE/SRAM_RSP_PIPE_STAGE` 等参数共同决定。
-
-## 4. 时钟与复位
-
-- 单时钟：`clk`
-- 低有效复位：`rst_n`
-- 控制：
-   - `stall`：低功耗/节流信号（当前版本顶层未将 `stall` 显式接入子模块的 ready/状态机，使用前建议结合系统低功耗策略进行验证与约束）。
-   - `clear`：清空信号（当前版本顶层未将 `clear` 显式接入 LUT/ROB/指针控制等子模块，使用前建议确认系统是否依赖该行为）。
-- `idle`：表示模块空闲；实现为 `rob_empty && spram_ctrl_empty`。
-
-## 5. 接口描述（valid/ready 语义）
-
-### 5.1 写请求接口
-
-| 信号 | 方向 | 位宽 | 说明 |
-|---|---|---:|---|
-| `write_req_vld` | in | 1 | 写入请求有效 |
-| `write_req_pld` | in | DATA_WIDTH | 写入 payload |
-| `write_req_rdy` | out | 1 | 模块可接收写入 |
-
-写入握手条件：`write_req_vld && write_req_rdy`。
-
-### 5.2 读响应接口
-
-| 信号 | 方向 | 位宽 | 说明 |
-|---|---|---:|---|
-| `read_resp_vld` | out | 1 | 读响应有效 |
-| `read_resp_pld` | out | DATA_WIDTH | 读出的 payload |
-| `read_resp_rdy` | in | 1 | 下游可接收读响应 |
-
-读出握手条件：`read_resp_vld && read_resp_rdy`。
-
-### 5.3 状态指示
-
-| 信号 | 方向 | 说明 |
-|---|---|---|
-| `almost_full` | out | 距离 full 还有阈值 X 时置位 |
-| `almost_empty` | out | 距离 empty 还有阈值 X 时置位 |
-| `empty` | out | FIFO 为空 |
-| `full` | out | FIFO 为满 |
-| `idle` | out | 模块空闲（ROB 空且 SRAM 控制层空） |
-
-### 5.4 SRAM 物理端口（多组）
-
-SRAM 以 group 的形式暴露，数量由 `SRAM_GROUP_NUM` 决定。
-
-| 信号 | 方向 | 位宽 | 说明 |
-|---|---|---:|---|
-| `spram_addr[g]` | out | ADDR_WIDTH | 第 g 组 SRAM 地址 |
-| `spram_din[g]` | out | DATA_WIDTH | 第 g 组写数据 |
-| `spram_dout[g]` | in | DATA_WIDTH | 第 g 组读数据 |
-| `spram_en[g]` | out | 1 | 第 g 组使能 |
-| `spram_wren[g]` | out | 1 | 第 g 组写使能（1=write，0=read） |
-| `spram_bit_en[g]` | out | DATA_WIDTH | bit enable（当前实现写全 1） |
-
-## 6. 参数与约束
-
-| 参数 | 默认值（参考RTL） | 约束 | 说明 |
-|---|---:|---|---|
-| `FIFO_DEPTH_PER_GROUP` | 64 | >=4（文档建议 >=32/64） | 每组 SRAM 的深度 |
-| `SRAM_GROUP_NUM` | 2 | >=1（MCP=1 时建议 >=2） | SRAM 组数，用于提升吞吐 |
-| `DATA_WIDTH` | 16 | >=1 | 数据位宽 |
-| `ALMOST_FULL_THRESHOLD` | 2 | >=0 | almost_full 阈值 |
-| `ALMOST_EMPTY_THRESHOLD` | 2 | >=0 | almost_empty 阈值 |
-| `FORWARD_EN` | 1 | 0/1 | ROB forwarding 开关 |
-| `ROB_DEPTH` | 16 | >= SRAM 数据返回总延迟 | ROB 深度，需覆盖 SRAM pipeline 延迟 |
-| `SRAM_ACCESS_LATENCY` | 1 | >=1 | SRAM 固有访问延迟 |
-| `SRAM_REQ_PIPE_STAGE` | 0 | >=0 | SRAM 请求侧 pipeline |
-| `SRAM_RSP_PIPE_STAGE` | 0 | >=0 | SRAM 返回侧 pipeline |
-| `MCP_CYCLE` | 1 | >=1 | SRAM MCP 周期，影响反压 |
-
-派生量（顶层使用）：
-
-- `SRAM_DELAY_TOTAL = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE`
-- `ROB_ALMOST_FULL_THRESHOLD = ROB_DEPTH - SRAM_DELAY_TOTAL`
-
-## 7. 内部微架构与关键实现
-
-### 7.1 层次结构
-
-- `fcip_sync_fifo_spram`（顶层）
-  - `fcip_sfifo_spram_ctrl`：SRAM 组调度、LUT 维护、生成每组的 memory request
-  - `fcip_mem_ctrl_wrap`（每组一个）：请求/返回 pipeline + MCP 反压
-  - `fcip_sfifo_spram_rob`：顺序输出与 forwarding
-  - 读返回 mux：将多组内存返回（`mem_rsp_*`）按 onehot 选择并送入 ROB
-
-结合 `fcip_sync_fifo_spram.md` 的术语，顶层逻辑可概括为四个部分：
-
-- **ROB**：维护顺序输出与可选的 forwarding。
-- **Decode**：决定写请求走 ROB 还是走 SRAM 路径。
-- **LUT**：记录每笔数据存放的 SRAM group（本质为不带 forwarding 的 reg FIFO）。
-- **FIFO Controller / SRAM R/W Controller**：对每个 group 进行读写指针控制并生成 memory wrapper 的请求。
-
-### 7.2 顶层写入仲裁（ROB vs SRAM）
-
-顶层将写请求分为两条路径：
-
-- **ROB 写入路径**：当“SRAM 控制层为空”且 ROB 允许接收时，优先写 ROB（用于降低延迟/实现 forward）。
-- **SRAM 写入路径**：否则写入进入 SRAM 控制器（最终写入某个 SRAM 组）。
-
-RTL 中的关键选择：
-
-- `sel_rob_en = rob_write_rdy && spram_ctrl_empty`
-- `sel_ram_en = ram_write_rdy && ~sel_rob_en`
-- `write_req_rdy = sel_rob_en || sel_ram_en`
-
-### 7.3 SRAM 控制器（fcip_sfifo_spram_ctrl）
-
-该模块职责：
-
-1. 写请求分配到某个 SRAM group
-   - 使用 round-robin grant（`fcip_grant_gen_rr`）在可用组间分配
-   - 关键约束：同一组同一周期避免“写与读冲突”（读优先/互斥通过 `sram_write_rdy = ptr_ctrl_write_rdy && ~ptr_ctrl_read_vld` 体现）
-
-2. 读请求从 LUT 获取 group 选择
-   - LUT 是一个不带 forwarding 的 reg FIFO（`fcip_sync_fifo_reg`），其每条 entry 记录“该 FIFO 元素位于哪个 SRAM group”（onehot）。
-   - 当 LUT 出队得到 `lut_resp_pld` 后，产生 `sram_read_en` 并以 onehot 形式输出 `sram_read_sel`。
-
-3. 背压
-   - `write_rdy = ~spram_ctrl_full`（full 来自 LUT 满或资源不可用）
-   - `spram_ctrl_empty = ~(|ptr_ctrl_read_rdy) || ram_lut_empty`（没有可读组或 LUT 空即为空）
-
-### 7.4 指针控制（fcip_sfifo_spram_ptr_ctrl）
-
-每个 SRAM group 一份 ptr 控制器：
-
-- 维护 `wptr/rptr/ptr_cnt`
-- `ram_ctrl_empty = (ptr_cnt==0)`，`ram_ctrl_full = (ptr_cnt==FIFO_DEPTH_PER_GROUP)`
-- 读握手：`read_rdy = ~ram_ctrl_empty && mem_req_rdy`
-- 当 `read_vld && read_rdy` 时发起 SRAM 读（`rinc`）
-
-实现注意：`fcip_sfifo_spram_ptr_ctrl.sv` 当前将 `mem_req_addr` 固定连接到 `wptr`（参见 `assign mem_req_addr = wptr;`）。该连接方式是否符合预期需要由设计方确认；若预期为“读使用 `rptr`、写使用 `wptr`”，则该处可能需要修正。本文档在此仅做事实陈述，并在验证章节中建议针对地址相关行为增加定向用例。
-
-### 7.5 ROB（fcip_sfifo_spram_rob）
-
-ROB 的目标：在“SRAM 数据返回有延迟且可能乱到达（相对预分配顺序）”场景下，仍对外提供严格顺序输出。
-
-- ROB 维护两个指针：
-  - `rob_rptr`：当前应输出的 entry
-  - `rob_wptr`：pre-alloc 指向下一个可分配 entry（`rob_prealloc_id`）
-- 每个 entry 具有 `array_vld` 来标记数据是否就绪。
-
-输入通道：
-
-- `rob_req_*`：来自顶层“直接写 ROB”的请求
-- `ram_req_*`：来自 SRAM 返回的数据，携带 `ram_req_id`（由 SRAM 读请求的 sideband 传回）
-
-Forwarding（`FORWARD_EN=1`）行为摘要：
-
-- 若 ROB 为空且下游 ready，允许将当前拍输入直接 forward 到输出，以减少额外延迟。
-- 同时支持“SRAM 返回命中当前输出指针”的 forward。
-
-## 8. 空闲/低功耗/清空
-
-- `idle = rob_empty && spram_ctrl_empty`
-- `stall/clear`：当前顶层 RTL 未将 `stall/clear` 显式接入到 LUT/ROB/ptr_ctrl 等子模块的状态机与指针清零逻辑。
-   - 若系统对 `stall` 有“冻结内部状态、不发生对外部 SRAM 访问”的要求，建议补充实现或在验证中覆盖该低功耗场景。
-   - 若系统对 `clear` 有“立即清空 FIFO 并丢弃在途返回”的要求，建议补充实现或在系统级规约中禁止在有在途事务时拉起 `clear`。
-
-## 9. 验证建议（Testcase 规划）
-
-### 9.1 基础功能
-
-1. **基本 FIFO 入队/出队**
-   - 连续写入 N 条数据，再逐条读出比对顺序与内容。
-
-2. **满/空边界**
-   - 写入至 full，确认 `write_req_rdy` 拉低、`full=1`。
-   - 读出至 empty，确认 `read_resp_vld` 拉低、`empty=1`。
-
-3. **almost_full / almost_empty 阈值**
-   - 构造距离 full/empty 的边界位置，验证阈值行为。
-
-### 9.2 延迟与 forwarding
-
-4. **FORWARD_EN=0/1 对比**
-   - 关注空 FIFO 场景的读延迟差异与时序路径。
-
-5. **SRAM latency/pipe 组合覆盖**
-   - 覆盖 `SRAM_ACCESS_LATENCY`>=1 以及 `SRAM_REQ_PIPE_STAGE/SRAM_RSP_PIPE_STAGE` 组合，确认 ROB_DEPTH 充足且不会错误输出。
-
-### 9.3 多组 SRAM 与仲裁
-
-6. **SRAM_GROUP_NUM=1/2/多组覆盖**
-   - 随机写入与读出，确保 LUT 记录的 group 与实际访问一致。
-
-7. **写入 round-robin 分配公平性（可选）**
-   - 长序列写入检查各组写入次数分布近似均衡（仅在资源始终可用时）。
-
-### 9.4 MCP 反压与 backpressure
-
-8. **MCP_CYCLE>1 流控覆盖**
-   - 使 `mem_req_rdy` 周期性拉低，验证系统仍能正确反压并最终按序输出。
-
-9. **读侧反压**
-   - `read_resp_rdy` 随机拉低，验证无丢失/重复输出。
-
-### 9.5 随机压力与 Scoreboard
-
-10. **随机读写压力**
-   - 参考模型采用“理想同步 FIFO”队列。
-   - 随机化：写入节奏、读 ready、参数组合（尤其是多组与 MCP）。
-
-## 10. 设计注意事项
-
-1. **ROB_DEPTH 选型**
-   - 文档建议 `ROB_DEPTH >= SRAM 数据返回总延迟`，以避免预分配与返回对齐异常。
-
-2. **多组 SRAM 的带宽假设**
-   - 当 `MCP_CYCLE=1` 且希望达到较高吞吐时，建议 `SRAM_GROUP_NUM>=2`，以降低同组读写互斥带来的瓶颈。
-
-3. **ptr_ctrl 地址与读写互斥**
-   - ptr_ctrl 内 `mem_req_addr` 的赋值策略需与设计意图一致；建议在 review 中重点确认读地址是否正确。
-
+### 1.1 简介
+
+`fcip_sync_fifo_spram` 是一个基于单端口SRAM实现的同步FIFO设计。该设计采用创新的ROB（Reorder Buffer，重排序缓冲区）架构，使用多组SRAM并行工作，实现了在单时钟域内的高带宽FIFO功能。设计支持可选的零延迟数据转发、阈值指示和灵活的流水线配置。
+
+### 1.2 主要特性
+
+- **基于SRAM的存储**：使用单端口SRAM作为主存储介质
+- **多组SRAM并行**：支持多个SRAM组并行工作，提高带宽
+- **ROB架构**：乱序写入、顺序输出的重排序缓冲区
+- **零延迟转发**：可选的数据直通路径，最小延迟为0
+- **深度FIFO**：支持大容量存储（推荐≥64深度）
+- **阈值指示**：Almost Full和Almost Empty标志
+- **可配置流水线**：SRAM请求和响应流水线可配置
+- **MCP支持**：支持多周期路径时序优化
+- **LUT索引**：使用查找表记录每笔数据的存储位置
+- **lowpower管理**：支持stall和clear控制
+
+### 1.3 设计层次结构
+
+```
+fcip_sync_fifo_spram (顶层)
+├── 写仲裁器
+│   └── ROB/SRAM路径选择
+│
+├── fcip_sfifo_spram_ctrl (SRAM读写控制器)
+│   ├── 写分配仲裁器（轮转仲裁）
+│   ├── fcip_sfifo_spram_ptr_ctrl x N (指针控制器，每组一个)
+│   │   ├── 读写指针管理
+│   │   ├── 满/空检测
+│   │   └── SRAM接口控制
+│   └── fcip_sync_fifo_reg (LUT查找表)
+│       └── 记录数据存储位置
+│
+├── fcip_mem_ctrl_wrap x N (SRAM控制包装器，每组一个)
+│   ├── MCP控制
+│   ├── 请求流水线
+│   ├── 响应流水线
+│   └── Sideband传递
+│
+├── fcip_sfifo_spram_rob (重排序缓冲区)
+│   ├── 预分配逻辑
+│   ├── 乱序写入
+│   ├── 顺序读出
+│   └── 数据转发逻辑
+│
+└── 数据多路复用器
+    └── SRAM组数据选择
+```
+
+### 1.4 核心架构概念
+
+#### 1.4.1 ROB工作原理
+
+ROB维护一个顺进顺出模型，但内部实现乱序写入：
+
+**三态模型：**
+每个ROB条目有三个状态：
+1. **空闲（Idle）**：条目可被分配
+2. **已分配等待数据（Allocated）**：已预分配但数据未到
+3. **数据有效（Valid）**：数据已到达，可以读出
+
+**指针机制：**
+- **预分配指针（Prealloc Pointer）**：顺序分配条目ID给新请求
+- **写入指针（Write Pointer）**：数据到达时写入对应条目
+- **读出指针（Read Pointer）**：顺序读出有效数据
+
+**工作流程：**
+```
+周期0: 预分配ID=0给请求A
+周期1: 预分配ID=1给请求B
+周期2: 请求B的数据到达，写入ROB[1]
+周期3: 请求A的数据到达，写入ROB[0]
+周期4: ROB[0]有效，输出请求A的数据
+周期5: ROB[1]有效，输出请求B的数据
+```
+
+#### 1.4.2 解码路由策略
+
+设计采用智能路由决策：
+
+```
+if (SRAM为空) {
+    if (启用转发且下游就绪) {
+        数据直接转发到输出（零延迟）
+    } else {
+        数据写入SRAM
+    }
+} else {
+    数据写入SRAM
+}
+```
+
+这确保在FIFO空闲时可以实现零延迟直通，在有数据积压时则使用SRAM缓冲。
+
+### 1.5 典型应用场景
+
+- **数据缓冲**：在生产者和消费者速率不匹配时缓冲数据
+- **流水线解耦**：解耦不同频率或延迟的流水线阶段
+- **突发吸收**：吸收短时间的数据突发
+- **深度存储**：需要大容量FIFO但不想使用大量寄存器
+
+## 2. 模块功能说明
+
+### 2.1 顶层模块：fcip_sync_fifo_spram
+
+顶层模块整合所有子模块，实现完整的FIFO功能。
+
+**主要功能：**
+- 接收写请求，决定写入ROB还是SRAM
+- 协调多个SRAM组的并行访问
+- 管理ROB预分配和数据回填
+- 仲裁和多路复用SRAM读取数据
+- 输出顺序正确的读响应
+
+### 2.2 写仲裁器
+
+决定输入数据的路由路径。
+
+**决策逻辑：**
+```verilog
+sel_rob_en  = rob_write_rdy && spram_ctrl_empty
+sel_ram_en  = ram_write_rdy && ~sel_rob_en
+write_req_rdy = sel_rob_en || sel_ram_en
+```
+
+**路由规则：**
+- ROB优先：当SRAM为空时，数据通过ROB快速通道
+- SRAM路径：当SRAM非空或ROB不可用时，数据写入SRAM
+- 互斥选择：同一周期只选一条路径
+
+### 2.3 SRAM读写控制器：fcip_sfifo_spram_ctrl
+
+管理多个SRAM组的读写操作。
+
+**主要功能：**
+
+**2.3.1 写分配（Write Allocation）**
+- 使用轮转仲裁器在SRAM组间分配写请求
+- 确保负载均衡
+- 避免单个SRAM组过载
+
+```verilog
+fcip_grant_gen_rr u_write_alloc(
+    .v_vld(sram_write_rdy),
+    .v_grant(sram_write_alloc)
+);
+```
+
+**2.3.2 指针控制器（Per-Group）**
+- 每个SRAM组独立的读写指针
+- 独立的满/空状态
+- 生成SRAM访问请求
+
+**2.3.3 LUT查找表**
+- 记录每笔写入数据所在的SRAM组
+- 使用寄存器FIFO实现
+- 深度 = FIFO_DEPTH_PER_GROUP × SRAM_GROUP_NUM
+- 存储格式：one-hot编码的组选择信号
+
+**工作流程：**
+```
+写入时: LUT入队 = {group_select_onehot}
+读取时: LUT出队，得到group_select
+       根据group_select向对应SRAM组发起读请求
+```
+
+### 2.4 指针控制器：fcip_sfifo_spram_ptr_ctrl
+
+每个SRAM组的独立控制器。
+
+**主要功能：**
+- **读写指针管理**：维护独立的rptr和wptr
+- **容量跟踪**：使用ptr_cnt跟踪使用条目数
+- **满/空检测**：
+  ```verilog
+  ram_ctrl_empty = (ptr_cnt == 0)
+  ram_ctrl_full  = (ptr_cnt == FIFO_DEPTH_PER_GROUP)
+  ```
+- **SRAM请求生成**：
+  - 写请求：`mem_req_opcode = 1, mem_req_addr = wptr`
+  - 读请求：`mem_req_opcode = 0, mem_req_addr = rptr`
+- **Sideband传递**：将ROB的预分配ID传递到响应端
+
+**关键逻辑：**
+```verilog
+// 写操作
+winc = write_vld && write_rdy
+wptr <= wptr + 1 when winc
+
+// 读操作
+rinc = read_vld && read_rdy
+rptr <= rptr + 1 when rinc
+
+// 计数器
+ptr_cnt更新：
+  winc && rinc: 不变
+  winc: +1
+  rinc: -1
+```
+
+### 2.5 重排序缓冲区：fcip_sfifo_spram_rob
+
+ROB实现乱序写入、顺序读出。
+
+**主要功能：**
+
+**2.5.1 预分配管理**
+```verilog
+rob_prealloc_id = rob_wptr  // 顺序分配ID
+sram_pre_winc = sram_read_en  // SRAM读时预分配
+```
+
+**2.5.2 写入控制**
+- **ROB直接写**：`rob_req_vld && rob_req_rdy`
+  - 数据直接写入rob_wptr位置
+  - rob_wptr递增
+- **SRAM回填写**：`ram_req_vld && ram_req_rdy`
+  - 数据写入ram_req_id指定的位置
+  - 不递增rob_wptr（ID已预分配）
+
+**2.5.3 读出控制**
+- 检查rob_rptr位置的条目是否有效
+- 如果有效且下游就绪，输出数据
+- rob_rptr递增
+
+**2.5.4 数据转发（FORWARD_EN = 1）**
+
+转发有两种情况：
+
+**直接转发（Direct Forward）：**
+```verilog
+direct_forward_en = rob_empty && read_rdy
+```
+- ROB为空时，ROB写入的数据直接转发到输出
+- 实现零延迟
+- 数据不写入ROB
+
+**SRAM转发（SRAM Forward）：**
+```verilog
+sram_forward_en = ram_req_rdy && read_rdy && (ram_req_id == rob_rptr)
+```
+- SRAM读回的数据正好是下一个要输出的
+- 直接转发到输出
+- 不写入ROB，但rob_rptr递增
+
+**条目状态管理：**
+```verilog
+array_vld[i] 状态转换：
+  0 → 1: 写入时（rob_winc或sram_winc到该位置）
+  1 → 0: 读出时（rinc且rptr==i）或转发时
+```
+
+**2.5.5 阈值管理**
+```verilog
+rob_almost_full = (ptr_cnt >= ALMOST_FULL_THRESHOLD)
+rob_almost_empty = (ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
+```
+
+### 2.6 SRAM控制包装器：fcip_mem_ctrl_wrap
+
+封装单个SRAM组的访问逻辑（与mem_fake_2p_mem中的模块相同）。
+
+**主要功能：**
+- MCP周期控制
+- 请求流水线
+- 响应流水线
+- Sideband延迟匹配
+- CDC标记插入
+
+### 2.7 数据多路复用器
+
+选择正确SRAM组的读数据。
+
+**工作原理：**
+```verilog
+1. sram_read_sel指示读取的SRAM组（one-hot）
+2. 延迟SRAM_DELAY_TOTAL周期，与数据对齐
+3. 使用one-hot选择器从N个SRAM输出中选择
+4. 输出到ROB进行重排序
+```
+
+**关键信号：**
+- `sram_read_sel[N-1:0]`：读请求时的组选择
+- `sram_read_sel_delay[N-1:0]`：延迟后的组选择
+- `mem_rsp_data[N-1:0][DATA_WIDTH-1:0]`：N组SRAM数据
+- `sram_req_pld`：选中的数据
+
+## 3. 接口描述
+
+### 3.1 顶层模块参数
+
+| 参数 | 类型 | 默认值 | 约束 | 描述 |
+|------|------|--------|------|------|
+| FIFO_DEPTH_PER_GROUP | integer unsigned | 64 | ≥4，建议≥32 | 每个SRAM组的深度 |
+| SRAM_GROUP_NUM | integer unsigned | 2 | ≥1，MCP=1时建议≥2 | SRAM组数量 |
+| DATA_WIDTH | integer unsigned | 16 | ≥1 | 数据位宽 |
+| ALMOST_FULL_THRESHOLD | integer unsigned | 2 | ≥0 | Almost Full阈值 |
+| ALMOST_EMPTY_THRESHOLD | integer unsigned | 2 | ≥0 | Almost Empty阈值 |
+| FORWARD_EN | integer unsigned | 1 | 0或1 | 转发使能：1=启用，0=禁用 |
+| ROB_DEPTH | integer unsigned | 16 | ≥ MEM延迟 | ROB深度 |
+| SRAM_ACCESS_LATENCY | integer unsigned | 1 | ≥1 | SRAM访问延迟 |
+| SRAM_REQ_PIPE_STAGE | integer unsigned | 0 | ≥0 | 请求流水线级数 |
+| SRAM_RSP_PIPE_STAGE | integer unsigned | 0 | ≥0 | 响应流水线级数 |
+| MCP_CYCLE | integer unsigned | 1 | ≥1 | 多周期路径周期数 |
+
+### 3.2 端口定义
+
+#### 3.2.1 时钟和复位
+
+| 端口名称 | 方向 | 位宽 | 描述 |
+|----------|------|------|------|
+| clk | input | 1 | 系统时钟 |
+| rst_n | input | 1 | 低电平有效异步复位 |
+
+#### 3.2.2 控制端口
+
+| 端口名称 | 方向 | 位宽 | 描述 |
+|----------|------|------|------|
+| stall | input | 1 | 暂停控制：1=阻塞新写入 |
+| clear | input | 1 | 清除控制：1=清空FIFO |
+| idle | output | 1 | 空闲状态：1=ROB和SRAM都为空 |
+
+#### 3.2.3 写端口
+
+| 端口名称 | 方向 | 位宽 | 协议 | 描述 |
+|----------|------|------|------|------|
+| write_req_vld | input | 1 | Valid-Ready | 写请求有效 |
+| write_req_pld | input | DATA_WIDTH | Valid-Ready | 写数据 |
+| write_req_rdy | output | 1 | Valid-Ready | 写请求就绪 |
+
+#### 3.2.4 读端口
+
+| 端口名称 | 方向 | 位宽 | 协议 | 描述 |
+|----------|------|------|------|------|
+| read_resp_vld | output | 1 | Valid-Ready | 读响应有效 |
+| read_resp_pld | output | DATA_WIDTH | Valid-Ready | 读数据 |
+| read_resp_rdy | input | 1 | Valid-Ready | 读响应就绪 |
+
+#### 3.2.5 状态端口
+
+| 端口名称 | 方向 | 位宽 | 描述 |
+|----------|------|------|------|
+| almost_full | output | 1 | 接近满：距满还有ALMOST_FULL_THRESHOLD个空位 |
+| almost_empty | output | 1 | 接近空：距空还有ALMOST_EMPTY_THRESHOLD个条目 |
+| empty | output | 1 | 空状态：FIFO为空 |
+| full | output | 1 | 满状态：FIFO为满 |
+
+#### 3.2.6 SRAM接口（每组）
+
+| 端口名称 | 方向 | 位宽 | 描述 |
+|----------|------|------|------|
+| spram_addr[i] | output | $clog2(FIFO_DEPTH_PER_GROUP) | 第i组SRAM地址 |
+| spram_din[i] | output | DATA_WIDTH | 第i组SRAM写数据 |
+| spram_dout[i] | input | DATA_WIDTH | 第i组SRAM读数据 |
+| spram_en[i] | output | 1 | 第i组SRAM使能 |
+| spram_wren[i] | output | 1 | 第i组SRAM写使能 |
+| spram_bit_en[i] | output | DATA_WIDTH | 第i组SRAM位使能 |
+
+其中 i ∈ [0, SRAM_GROUP_NUM-1]
+
+## 4. 时序和时钟结构
+
+### 4.1 时钟域
+
+该设计为单时钟同步设计，所有逻辑工作在同一时钟下。
+
+### 4.2 延迟分析
+
+**SRAM总延迟：**
+```
+SRAM_DELAY_TOTAL = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE
+```
+
+**写入到读出延迟：**
+
+**情况1：直接转发（FORWARD_EN=1，FIFO为空）**
+```
+延迟 = 0周期（组合路径）
+```
+
+**情况2：通过ROB但SRAM为空（FORWARD_EN=1）**
+```
+延迟 = 0周期（直接转发到ROB输出）
+```
+
+**情况3：通过SRAM（正常路径）**
+```
+延迟 = SRAM_DELAY_TOTAL + 1（ROB输出）
+```
+
+**情况4：无转发（FORWARD_EN=0）**
+```
+最小延迟 = SRAM_DELAY_TOTAL + 1
+```
+
+### 4.3 带宽分析
+
+**理论最大带宽：**
+```
+写带宽 = 1次写入/周期
+读带宽 = 1次读出/周期（前提：数据可用）
+```
+
+**SRAM带宽：**
+```
+单组带宽 = 1次操作/(MCP_CYCLE周期)
+总SRAM带宽 = SRAM_GROUP_NUM × 单组带宽
+```
+
+**持续吞吐量：**
+- 当 SRAM_GROUP_NUM × (1/MCP_CYCLE) ≥ 1：可以支持满带宽读写
+- 当 SRAM_GROUP_NUM × (1/MCP_CYCLE) < 1：持续吞吐量受限
+
+**示例：**
+```
+MCP_CYCLE=1, SRAM_GROUP_NUM=2:
+  每组带宽=1次/周期，总带宽=2次/周期
+  可以同时1写1读，满带宽
+
+MCP_CYCLE=2, SRAM_GROUP_NUM=1:
+  总带宽=0.5次/周期
+  不能满带宽，需要时分复用
+```
+
+### 4.4 ROB深度设计
+
+**最小ROB深度：**
+```
+ROB_DEPTH_min = SRAM_DELAY_TOTAL + 2
+```
+
+**推荐ROB深度：**
+```
+ROB_DEPTH = 2 × SRAM_DELAY_TOTAL
+或
+ROB_DEPTH = 16（经验值）
+```
+
+**原因：**
+- 需要缓冲SRAM流水线中的所有请求
+- 需要额外空间处理SRAM响应等待
+- 过小会导致频繁背压
+
+### 4.5 FIFO深度设计
+
+**每组深度建议：**
+```
+FIFO_DEPTH_PER_GROUP:
+  小型：64-128
+  中型：256-512
+  大型：1024+
+```
+
+**总容量：**
+```
+总FIFO深度 = FIFO_DEPTH_PER_GROUP × SRAM_GROUP_NUM
+有效容量 = 总FIFO深度 - ALMOST_FULL_THRESHOLD
+```
+
+### 4.6 时序约束
+
+```tcl
+# 时钟定义
+create_clock -name clk -period <PERIOD> [get_ports clk]
+
+# SRAM接口约束
+for {set i 0} {$i < $SRAM_GROUP_NUM} {incr i} {
+    set_output_delay -clock clk <SETUP> [get_ports spram_addr[$i]*]
+    set_output_delay -clock clk <SETUP> [get_ports spram_din[$i]*]
+    set_input_delay -clock clk <CQ> [get_ports spram_dout[$i]*]
+}
+
+# MCP约束（如果MCP_CYCLE > 1）
+if {$MCP_CYCLE > 1} {
+    set_multicycle_path $MCP_CYCLE -setup \
+        -from [get_pins */u_fifo_spram_mem_ctrl*/*] \
+        -to [get_ports spram_*]
+    set_multicycle_path [expr $MCP_CYCLE - 1] -hold \
+        -from [get_pins */u_fifo_spram_mem_ctrl*/*] \
+        -to [get_ports spram_*]
+}
+
+# 转发路径约束（如果FORWARD_EN=1）
+if {$FORWARD_EN == 1} {
+    set_max_delay <PERIOD> \
+        -from [get_ports write_req_pld] \
+        -to [get_ports read_resp_pld]
+}
+
+# Almost Full/Empty组合路径
+set_max_delay [expr <PERIOD> * 0.8] \
+    -from [all_registers] \
+    -to [get_ports almost_*]
+```
+
+## 5. 功能行为
+
+### 5.1 正常操作流程
+
+#### 5.1.1 FIFO为空时的写入
+
+**场景：FORWARD_EN=1**
+```
+周期0: FIFO空，write_req_vld=1
+       → 选择ROB路径
+       → 数据直接转发到read_resp（如果read_resp_rdy=1）
+       → 延迟=0
+
+周期0: FIFO空，write_req_vld=1，read_resp_rdy=0
+       → 选择SRAM路径
+       → 数据写入SRAM组0
+       → LUT记录组0
+       → 预分配ROB[0]
+```
+
+**场景：FORWARD_EN=0**
+```
+周期0: FIFO空，write_req_vld=1
+       → 选择SRAM路径
+       → 后续流程同上
+```
+
+#### 5.1.2 FIFO非空时的写入
+
+```
+周期N: FIFO非空，write_req_vld=1
+       → 必须选择SRAM路径
+       → 轮转仲裁选择SRAM组i
+       → 写入SRAM[i]
+       → LUT记录组i
+       → 预分配ROB[k]
+```
+
+#### 5.1.3 读出流程
+
+```
+周期M: FIFO非空
+       → SRAM控制器检测到有数据
+       → 从LUT读出组选择
+       → 向对应SRAM组发起读请求
+       → 经过SRAM_DELAY_TOTAL周期
+       → 数据返回，附带ROB_ID
+       → 写入ROB[ROB_ID]
+       → 当ROB[rob_rptr]有效时输出
+```
+
+#### 5.1.4 转发场景
+
+**直接转发：**
+```
+前提: ROB空 && SRAM空 && read_resp_rdy=1 && FORWARD_EN=1
+
+周期0: write_req_vld=1, write_req_pld=DATA
+周期0: read_resp_vld=1, read_resp_pld=DATA（同周期）
+```
+
+**SRAM转发：**
+```
+前提: ROB[rob_rptr]等待数据 && SRAM读回ID==rob_rptr && read_resp_rdy=1
+
+周期N: SRAM返回数据，ID=rob_rptr
+周期N: 数据直接转发到read_resp
+       ROB[rob_rptr]不存储数据
+       rob_rptr递增
+```
+
+### 5.2 满和空状态
+
+**空状态：**
+```
+empty = spram_ctrl_empty && rob_empty
+```
+- 所有SRAM组都为空
+- ROB中无有效数据
+
+**满状态：**
+```
+full = spram_ctrl_full || rob_full
+```
+- 任一SRAM组满
+- 或ROB满
+
+**Almost Full：**
+```
+almost_full = (total_entries >= TOTAL_DEPTH - ALMOST_FULL_THRESHOLD)
+```
+
+**Almost Empty：**
+```
+almost_empty = (total_entries <= ALMOST_EMPTY_THRESHOLD)
+```
+
+### 5.3 流控行为
+
+**写端背压：**
+```
+write_req_rdy = 0 当：
+  - SRAM满
+  - ROB满
+  - stall=1
+```
+
+**读端控制：**
+```
+read_resp_vld = 0 当：
+  - FIFO空
+  - ROB输出位置无有效数据
+```
+
+**下游背压：**
+```
+read_resp_rdy = 0 时：
+  - ROB输出暂停
+  - 可能导致ROB填满
+  - 进而导致SRAM读取暂停
+  - 最终导致写入背压
+```
+
+### 5.4 复位和清除
+
+**复位（rst_n=0）：**
+- 所有指针复位到0
+- 所有有效位清零
+- FIFO变为空状态
+
+**清除（clear=1）：**
+- 功能与复位相同
+- 但是同步清除
+- 用于运行时清空FIFO
+
+**Stall（stall=1）：**
+- 阻止新的写入
+- 允许现有数据排空
+- 读取不受影响
+
+### 5.5 特殊场景
+
+#### 5.5.1 单SRAM组配置
+
+```
+SRAM_GROUP_NUM = 1, MCP_CYCLE = 1:
+  - 带宽受限：不能同时读写
+  - SRAM需要在读写间时分复用
+  - ROB缓冲更加重要
+```
+
+#### 5.5.2 高MCP配置
+
+```
+MCP_CYCLE = 2:
+  - SRAM访问间隔2周期
+  - 需要增加SRAM组数补偿带宽
+  - 或接受降低的吞吐量
+```
+
+#### 5.5.3 转发禁用的影响
+
+```
+FORWARD_EN = 0:
+  - 最小延迟增加
+  - 时序更宽松（无组合路径）
+  - 适合高频率设计
+```
+
+## 6. 验证策略
+
+### 6.1 验证目标
+
+#### 6.1.1 主要目标
+
+- **FIFO语义正确**：先进先出顺序保持
+- **数据完整性**：所有写入数据正确读出
+- **ROB功能**：乱序写入、顺序读出正确
+- **转发正确性**：转发数据与正常路径数据一致
+- **满/空检测**：边界条件正确处理
+- **多组SRAM**：负载均衡，无冲突
+- **协议合规**：Valid-Ready握手正确
+
+#### 6.1.2 覆盖率目标
+
+- 代码覆盖率：>95%
+- 功能覆盖率：100%
+- 所有参数组合测试
+- 所有转发路径测试
+
+### 6.2 测试平台架构
+
+```
+TB Top
+├── 时钟和复位生成器
+├── 写驱动器
+│   ├── 随机/定向数据生成
+│   ├── 可变写入速率
+│   └── 数据序号标记
+├── 读监控器
+│   ├── 数据捕获
+│   ├── 顺序校验
+│   └── 数据完整性检查
+├── SRAM模型（N组）
+│   ├── 行为级模型
+│   ├── 可配置延迟
+│   └── 读写操作模拟
+├── 参考模型
+│   ├── 理想FIFO行为
+│   ├── 写入记录
+│   └── 顺序校验
+├── 记分板
+│   ├── 数据比较
+│   ├── 顺序验证
+│   └── 统计信息
+└── 覆盖率收集器
+```
+
+### 6.3 测试计划
+
+#### 6.3.1 基本功能测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| BF001 | 简单读写 | 写N个数据，读N个数据 | 数据和顺序都正确 |
+| BF002 | 连续写入 | 持续写入到满 | 正确检测满状态 |
+| BF003 | 连续读取 | 持续读取到空 | 正确检测空状态 |
+| BF004 | 交替读写 | 交替进行读写操作 | 数据正确，无死锁 |
+| BF005 | 突发写入 | 短时间大量写入 | 缓冲正确，无丢失 |
+| BF006 | 突发读取 | 短时间大量读取 | 输出正确，无错误 |
+| BF007 | FIFO回卷 | 多次填满排空 | 指针正确回卷 |
+| BF008 | 随机读写 | 随机速率读写 | 数据一致性保持 |
+
+#### 6.3.2 ROB功能测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| ROB001 | 顺序输出 | 乱序写入ROB | 输出保持写入顺序 |
+| ROB002 | ROB满 | 填满ROB | 正确背压 |
+| ROB003 | ROB预分配 | 验证ID预分配 | ID顺序连续 |
+| ROB004 | 延迟回填 | 后发数据先到达 | 仍按序输出 |
+| ROB005 | ROB阈值 | 测试almost_full/empty | 阈值正确触发 |
+
+#### 6.3.3 转发功能测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| FWD001 | 直接转发 | FIFO空时写入 | 零延迟输出 |
+| FWD002 | SRAM转发 | SRAM读回正好匹配输出位置 | 直接转发无等待 |
+| FWD003 | 转发与正常路径 | 对比转发和非转发数据 | 数据一致 |
+| FWD004 | 转发禁用 | FORWARD_EN=0 | 无直通路径 |
+| FWD005 | 转发背压 | 转发时下游不就绪 | 转发取消，数据缓冲 |
+
+#### 6.3.4 多SRAM组测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| MG001 | 负载均衡 | 观察写分配 | 各组负载接近 |
+| MG002 | 并发读写 | 多组同时读写 | 无冲突，数据正确 |
+| MG003 | 单组 | SRAM_GROUP_NUM=1 | 正常工作 |
+| MG004 | 多组 | SRAM_GROUP_NUM=4+ | 正常工作，带宽提升 |
+| MG005 | LUT功能 | 验证LUT记录和查找 | 组选择正确 |
+
+#### 6.3.5 边界和压力测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| STR001 | 满带宽写 | 持续满速写入 | 达到理论带宽 |
+| STR002 | 满带宽读 | 持续满速读取 | 达到理论带宽 |
+| STR003 | 同时满带宽 | 同时满速读写 | 根据配置达到带宽 |
+| STR004 | 长时间运行 | 运行1M+周期 | 无错误，无泄漏 |
+| STR005 | 最小深度 | FIFO_DEPTH=4 | 正常工作 |
+| STR006 | 最小ROB | ROB_DEPTH=SRAM_DELAY+2 | 正常工作 |
+| STR007 | 大深度 | FIFO_DEPTH=2048+ | 正常工作 |
+
+#### 6.3.6 参数扫描测试
+
+| 测试ID | 测试名称 | 描述 | 通过标准 |
+|--------|----------|------|----------|
+| PAR001 | SRAM延迟扫描 | 不同SRAM_ACCESS_LATENCY | 所有配置正常 |
+| PAR002 | 流水线扫描 | 不同REQ/RSP_PIPE_STAGE | 所有配置正常 |
+| PAR003 | MCP扫描 | 不同MCP_CYCLE | 所有配置正常 |
+| PAR004 | 组数扫描 | 不同SRAM_GROUP_NUM | 1-8组都正常 |
+| PAR005 | ROB深度扫描 | 不同ROB_DEPTH | 所有深度正常 |
+| PAR006 | 数据位宽扫描 | 不同DATA_WIDTH | 8-512位都正常 |
+
+### 6.4 覆盖率计划
+
+```systemverilog
+covergroup cg_fifo_status;
+    cp_empty: coverpoint empty;
+    cp_full: coverpoint full;
+    cp_almost_empty: coverpoint almost_empty;
+    cp_almost_full: coverpoint almost_full;
+endgroup
+
+covergroup cg_rob_operation;
+    cp_direct_fwd: coverpoint direct_forward_en;
+    cp_sram_fwd: coverpoint sram_forward_en;
+    cp_rob_write: coverpoint rob_winc;
+    cp_sram_write: coverpoint sram_winc;
+    cp_rob_read: coverpoint rinc;
+    cross cp_direct_fwd, cp_rob_write;
+    cross cp_sram_fwd, cp_sram_write;
+endgroup
+
+covergroup cg_sram_groups;
+    cp_group_sel: coverpoint sram_write_alloc {
+        bins groups[] = {[0:2**SRAM_GROUP_NUM-1]};
+    }
+    cp_concurrent: coverpoint $countones(mem_req_vld);
+endgroup
+
+covergroup cg_forwarding;
+    cp_forward_type: coverpoint {direct_forward_en, sram_forward_en} {
+        bins none = {2'b00};
+        bins direct = {2'b10};
+        bins sram = {2'b01};
+        illegal_bins both = {2'b11};
+    }
+endgroup
+```
+
+### 6.5 断言计划
+
+```systemverilog
+// FIFO顺序保持
+property p_fifo_order;
+    logic [DATA_WIDTH-1:0] data_queue[$];
+    @(posedge clk) disable iff (!rst_n)
+    (write_req_vld && write_req_rdy, data_queue.push_back(write_req_pld))
+    ##[0:$] (read_resp_vld && read_resp_rdy) 
+    |-> (read_resp_pld == data_queue.pop_front());
+endproperty
+
+// ROB顺序输出
+property p_rob_inorder;
+    @(posedge clk) disable iff (!rst_n)
+    rinc |=> rob_rptr == $past(rob_rptr) + 1;
+endproperty
+
+// 满时不接受新写入
+property p_full_no_write;
+    @(posedge clk) disable iff (!rst_n)
+    full |-> !write_req_rdy;
+endproperty
+
+// 空时不输出
+property p_empty_no_read;
+    @(posedge clk) disable iff (!rst_n)
+    empty |-> !read_resp_vld;
+endproperty
+
+// 转发一致性
+property p_forward_consistency;
+    @(posedge clk) disable iff (!rst_n)
+    (FORWARD_EN && direct_forward_en && rob_req_vld)
+    |-> (read_resp_vld && read_resp_pld == rob_req_pld);
+endproperty
+
+// ROB不溢出
+property p_rob_no_overflow;
+    @(posedge clk) disable iff (!rst_n)
+    ptr_cnt <= ROB_DEPTH;
+endproperty
+
+// SRAM组选择有效
+property p_sram_sel_onehot;
+    @(posedge clk) disable iff (!rst_n)
+    sram_write_alloc != 0 |-> $onehot(sram_write_alloc);
+endproperty
+```
+
+### 6.6 回归策略
+
+- **快速回归**：基本功能测试（<10分钟）
+- **每日回归**：所有功能测试（2-4小时）
+- **每周回归**：包括压力和参数扫描（24小时）
+- **发布回归**：完整测试+多随机种子（多日）
+
+## 7. 设计约束和限制
+
+### 7.1 参数约束
+
+| 参数 | 约束 | 原因 |
+|------|------|------|
+| FIFO_DEPTH_PER_GROUP | ≥4，建议≥32 | 太小失去SRAM意义 |
+| SRAM_GROUP_NUM | ≥1，MCP=1时建议≥2 | 带宽考虑 |
+| ROB_DEPTH | ≥ SRAM_DELAY_TOTAL+2 | 缓冲流水线 |
+| ALMOST_FULL_THRESHOLD | < TOTAL_DEPTH | 逻辑约束 |
+
+### 7.2 使用建议
+
+**场景选择：**
+- **小容量（<512）**：使用寄存器FIFO
+- **中等容量（512-4K）**：本设计最合适
+- **大容量（>4K）**：考虑外部存储器
+
+**参数配置建议：**
+```
+高性能配置：
+  SRAM_GROUP_NUM = 2-4
+  MCP_CYCLE = 1
+  FORWARD_EN = 1
+  ROB_DEPTH = 16-32
+
+高频率配置：
+  SRAM_REQ_PIPE_STAGE = 1
+  SRAM_RSP_PIPE_STAGE = 1
+  FORWARD_EN = 0
+  MCP_CYCLE = 2
+
+低延迟配置：
+  FORWARD_EN = 1
+  SRAM_REQ_PIPE_STAGE = 0
+  SRAM_RSP_PIPE_STAGE = 0
+  ROB_DEPTH = 16+
+```
+
+### 7.3 已知限制
+
+- 单SRAM组+MCP>1时带宽受限
+- 转发路径可能成为时序关键路径
+- ROB过小会导致频繁背压
+- LUT深度线性增长，大容量时面积显著
+
+## 8. 附录
+
+### 8.1 术语表
+
+| 术语 | 定义 |
+|------|------|
+| ROB | Reorder Buffer，重排序缓冲区 |
+| LUT | Look-Up Table，查找表 |
+| SPRAM | Single-Port RAM，单端口RAM |
+| MCP | Multi-Cycle Path，多周期路径 |
+
+### 8.2 参考文档
+
+- FCIP设计规范
+- SRAM宏单元规格
+- SystemVerilog IEEE 1800
+
+### 8.3 修订历史
+
+| 版本 | 日期 | 作者 | 描述 |
+|------|------|------|------|
+| 1.0 | 2026-02-03 | jiaoyadi | 初始版本 |
+
+---
+
+**文档结束**
