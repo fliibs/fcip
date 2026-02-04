@@ -6,7 +6,9 @@
 //              - basic
 //================================================================
 
-module fcip_top (
+module fcip_top #(
+    parameter integer unsigned DOUBLE_DATA_WIRE = 1
+)(
     input logic clk,
     input logic rst_n,
     
@@ -620,7 +622,57 @@ module fcip_top (
     input  logic [15:0]  fcip_sync_fifo_spram_spram_dout [1:0],
     output logic [1:0]   fcip_sync_fifo_spram_spram_en,
     output logic [1:0]   fcip_sync_fifo_spram_spram_wren,
-    output logic [15:0]  fcip_sync_fifo_spram_spram_bit_en [1:0]
+    output logic [15:0]  fcip_sync_fifo_spram_spram_bit_en [1:0],
+
+    // ============================================================
+    // fcip_afifo_doub ports
+    // ============================================================
+    input  logic         fcip_afifo_doub_wclk,
+    input  logic         fcip_afifo_doub_rclk,
+    input  logic         fcip_afifo_doub_wrst_n,
+    input  logic         fcip_afifo_doub_rrst_n,
+    input  logic         fcip_afifo_doub_read_stall,
+    input  logic         fcip_afifo_doub_write_stall,
+    input  logic         fcip_afifo_doub_read_clear,
+    input  logic         fcip_afifo_doub_write_clear,
+    output logic         fcip_afifo_doub_read_full_zero,
+    output logic         fcip_afifo_doub_write_full_zero,
+    output logic         fcip_afifo_doub_read_idle,
+    input  logic         fcip_afifo_doub_s_vld,
+    input  logic [15:0]  fcip_afifo_doub_s_pld,
+    output logic         fcip_afifo_doub_s_rdy,
+    output logic         fcip_afifo_doub_m_vld,
+    output logic [15:0]  fcip_afifo_doub_m_pld,
+    input  logic         fcip_afifo_doub_m_rdy,
+    
+    // ============================================================
+    // fcip_afifo_mst_doub ports
+    // ============================================================
+    input  logic         fcip_afifo_mst_doub_stall,
+    input  logic         fcip_afifo_mst_doub_clear,
+    output logic         fcip_afifo_mst_doub_full_zero,
+    output logic         fcip_afifo_mst_doub_idle,
+    output logic         fcip_afifo_mst_doub_m_vld,
+    output logic [15:0]  fcip_afifo_mst_doub_m_pld,
+    input  logic         fcip_afifo_mst_doub_m_rdy,
+    input  logic [15:0]  fcip_afifo_mst_doub_wptr_async,
+    output logic [15:0]  fcip_afifo_mst_doub_rptr_async,
+    output logic [15:0]  fcip_afifo_mst_doub_rptr_sync,
+    input  logic [(DOUBLE_DATA_WIRE? (16*2+1) : 16):0]  fcip_afifo_mst_doub_pld_sync,
+    
+    // ============================================================
+    // fcip_afifo_slv_doub ports
+    // ============================================================
+    input  logic         fcip_afifo_slv_doub_stall,
+    input  logic         fcip_afifo_slv_doub_clear,
+    output logic         fcip_afifo_slv_doub_full_zero,
+    input  logic         fcip_afifo_slv_doub_s_vld,
+    input  logic [15:0]  fcip_afifo_slv_doub_s_pld,
+    output logic         fcip_afifo_slv_doub_s_rdy,
+    output logic [15:0]  fcip_afifo_slv_doub_wptr_async,
+    input  logic [15:0]  fcip_afifo_slv_doub_rptr_async,
+    input  logic [15:0]  fcip_afifo_slv_doub_rptr_sync,
+    output logic [(DOUBLE_DATA_WIRE? (16*2+1) : 16):0]  fcip_afifo_slv_doub_pld_sync
 );
 
 // ============================================================
@@ -1480,6 +1532,89 @@ fcip_sync_fifo_spram #(
     .spram_en       (fcip_sync_fifo_spram_spram_en),
     .spram_wren     (fcip_sync_fifo_spram_spram_wren),
     .spram_bit_en   (fcip_sync_fifo_spram_spram_bit_en)
+);
+
+// fcip_afifo instance
+fcip_afifo_doub #(
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .DOUBLE_DATA_WIRE       (DOUBLE_DATA_WIRE),
+    .SYNC_STAGE             (2)
+) u_fcip_afifo_doub (
+    .wclk           (fcip_afifo_doub_wclk),
+    .rclk           (fcip_afifo_doub_rclk),
+    .wrst_n         (fcip_afifo_doub_wrst_n),
+    .rrst_n         (fcip_afifo_doub_rrst_n),
+    .read_stall     (fcip_afifo_doub_read_stall),
+    .write_stall    (fcip_afifo_doub_write_stall),
+    .read_clear     (fcip_afifo_doub_read_clear),
+    .write_clear    (fcip_afifo_doub_write_clear),
+    .read_full_zero (fcip_afifo_doub_read_full_zero),
+    .write_full_zero(fcip_afifo_doub_write_full_zero),
+    .read_idle      (fcip_afifo_doub_read_idle),
+    .almost_empty   (),
+    .almost_full    (),
+    .s_vld          (fcip_afifo_doub_s_vld),
+    .s_pld          (fcip_afifo_doub_s_pld),
+    .s_rdy          (fcip_afifo_doub_s_rdy),
+    .m_vld          (fcip_afifo_doub_m_vld),
+    .m_pld          (fcip_afifo_doub_m_pld),
+    .m_rdy          (fcip_afifo_doub_m_rdy)
+);
+
+// fcip_afifo_mst instance
+fcip_afifo_mst_doub #(
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_EMPTY_THRESHOLD (4),
+    .DOUBLE_DATA_WIRE       (DOUBLE_DATA_WIRE),
+    .SYNC_STAGE             (2)
+) u_fcip_afifo_mst_doub (
+    .clk         (clk),
+    .rst_n       (rst_n),
+    .stall       (fcip_afifo_mst_doub_stall),
+    .clear       (fcip_afifo_mst_doub_clear),
+    .full_zero   (fcip_afifo_mst_doub_full_zero),
+    .idle        (fcip_afifo_mst_doub_idle),
+    .m_vld       (fcip_afifo_mst_doub_m_vld),
+    .m_pld       (fcip_afifo_mst_doub_m_pld),
+    .m_rdy       (fcip_afifo_mst_doub_m_rdy),
+    .almost_empty(),
+    .wptr_async  (fcip_afifo_mst_doub_wptr_async),
+    .rptr_async  (fcip_afifo_mst_doub_rptr_async),
+    .rptr_sync   (fcip_afifo_mst_doub_rptr_sync),
+    .pld_sync    (fcip_afifo_mst_doub_pld_sync)
+);
+
+// fcip_afifo_slv instance
+fcip_afifo_slv_doub #(
+    .FIFO_DEPTH             (16),
+    .DATA_WIDTH             (16),
+    .AUTO_CLEAR_EN          (0),
+    .THRESHOLD_EN           (1),
+    .ALMOST_FULL_THRESHOLD  (12),
+    .DOUBLE_DATA_WIRE       (DOUBLE_DATA_WIRE),
+    .SYNC_STAGE             (2)
+) u_fcip_afifo_slv_doub (
+    .clk        (clk),
+    .rst_n      (rst_n),
+    .stall      (fcip_afifo_slv_doub_stall),
+    .clear      (fcip_afifo_slv_doub_clear),
+    .full_zero  (fcip_afifo_slv_doub_full_zero),
+    .s_vld      (fcip_afifo_slv_doub_s_vld),
+    .s_pld      (fcip_afifo_slv_doub_s_pld),
+    .s_rdy      (fcip_afifo_slv_doub_s_rdy),
+    .almost_full(),
+    .wptr_async (fcip_afifo_slv_doub_wptr_async),
+    .rptr_async (fcip_afifo_slv_doub_rptr_async),
+    .rptr_sync  (fcip_afifo_slv_doub_rptr_sync),
+    .pld_sync   (fcip_afifo_slv_doub_pld_sync)
 );
 
 endmodule
