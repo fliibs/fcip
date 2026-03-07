@@ -1,0 +1,1 @@
+$FCIP_DIR/ip/handshake/fcip_hs_fanout.sv

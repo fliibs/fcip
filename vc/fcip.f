@@ -14,6 +14,7 @@
 -f $FCIP_DIR/vc/regslice.f
 -f $FCIP_DIR/vc/stdcell_wrap.f
 -f $FCIP_DIR/vc/sync_fifo.f
+-f $FCIP_DIR/vc/handshake.f
 
 $FCIP_DIR/tb/fcip_top.sv
 
