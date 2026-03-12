@@ -146,9 +146,9 @@ endgenerate
 /*========================================*/
 
 assign write_buffer_vld        = ~empty;
-assign write_buffer_data       = write_array_data[rd_ptr].write_data;
-assign write_buffer_addr       = write_array_data[rd_ptr].write_addr;
-assign write_buffer_bit_en     = write_array_data[rd_ptr].write_bit_en;
+assign write_buffer_data       = write_array_data[rd_ptr_true].write_data;
+assign write_buffer_addr       = write_array_data[rd_ptr_true].write_addr;
+assign write_buffer_bit_en     = write_array_data[rd_ptr_true].write_bit_en;
 assign rel_write_entry         = ~empty && write_buffer_rdy;
 
 /*========================================*/

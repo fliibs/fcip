@@ -164,6 +164,9 @@ generate
         assign mem_req_opcode       = write_sram_vld ? 1'b1 : 1'b0 ;//wren
         assign mem_req_sideband     = read_req_sideband;
         assign mem_req_bit_en       = write_sram_bit_en;
+
+        assign read_cmp_vld         = read_req_vld && read_req_rdy;
+        assign read_cmp_addr        = read_req_addr;
  
     end else begin:MEM_FAKE_READ_FIRST
 
