@@ -115,7 +115,7 @@ module fcip_ip_mimo_queue #(
 // Read/Write pointer
 //===========================================================================
     assign wren = |(v_req_rdy & v_req_vld);
-    assign rden = |(v_ack_rdy|v_ack_vld);
+    assign rden = |(v_ack_rdy & v_ack_vld);
 
     always_ff @(posedge clk or negedge rst_n) begin
         if(~rst_n)          wr_ptr <= {PTR_WIDTH{1'b0}};
