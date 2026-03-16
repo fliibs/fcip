@@ -228,39 +228,69 @@ assign full = |((wptr_async_inner_SIZE_ONLY ^ wq2_rptr_sync1) & wptr_sync);
 generate 
     if(THRESHOLD_EN) begin:THRESHOLD_EN_OPEN
 
-        logic [FIFO_DEPTH-1:0]   wq2_rptr_r;
-        logic                    rinc_fake;
-        logic [PTR_WIDTH:0]      ptr_cnt;
+        // ---------------------------------------------------------------
+        // Johnson counter based fill level computation (write domain)
+        //
+        // The async pointers use Johnson counter encoding with 2*FIFO_DEPTH
+        // unique states per full cycle. Convert to linear position via popcount:
+        //   MSB==0: position = popcount(ptr)              [0, FIFO_DEPTH]
+        //   MSB==1: position = 2*FIFO_DEPTH - popcount(ptr)  (FIFO_DEPTH, 2*FIFO_DEPTH)
+        //
+        // Fill level = (wr_pos - rd_pos) mod (2*FIFO_DEPTH), range [0, FIFO_DEPTH]
+        //
+        // This replaces the incremental counter which had a bug: when the
+        // read clock is faster than the write clock, multiple read-side
+        // pointer transitions are collapsed into a single rinc_fake event,
+        // causing ptr_cnt to under-decrement and report false almost_full.
+        //
+        // The synchronized read pointer may lag, so fill is conservatively
+        // overestimated — safe for almost_full detection.
+        // ---------------------------------------------------------------
 
-        always_ff @( posedge clk_marker or negedge rst_n ) begin
-            if(~rst_n)
-                wq2_rptr_r <= {(FIFO_DEPTH){1'b0}};
-            else
-                wq2_rptr_r <= wq2_rptr_sync1;
+        localparam int unsigned POS_WIDTH  = PTR_WIDTH + 2;
+        localparam int unsigned FILL_WIDTH = PTR_WIDTH + 1;
+        localparam int unsigned CYCLE_LEN  = 2 * FIFO_DEPTH;
+
+        logic [POS_WIDTH-1:0]  wr_popcount;
+        logic [POS_WIDTH-1:0]  rd_popcount;
+        logic [POS_WIDTH-1:0]  wr_pos;
+        logic [POS_WIDTH-1:0]  rd_pos;
+        logic [POS_WIDTH-1:0]  fill_raw;
+        logic [FILL_WIDTH-1:0] fill_level;
+
+        // Popcount of local write Johnson counter
+        always_comb begin
+            wr_popcount = '0;
+            for (int unsigned i = 0; i < FIFO_DEPTH; i++)
+                wr_popcount = wr_popcount + POS_WIDTH'(wptr_async_inner_SIZE_ONLY[i]);
         end
 
-        assign rinc_fake = |(wq2_rptr_r ^ wq2_rptr_sync1);
-
-        always_ff @( posedge clk_marker or negedge rst_n ) begin
-            if(~rst_n)
-                ptr_cnt <= 'b0;
-            else if(winc && rinc_fake)
-                ptr_cnt <= ptr_cnt;
-            else if(winc)
-                ptr_cnt <= ptr_cnt + 1'b1;
-            else if(rinc_fake)
-                ptr_cnt <= ptr_cnt - 1'b1;
+        // Popcount of synchronized read Johnson counter
+        always_comb begin
+            rd_popcount = '0;
+            for (int unsigned i = 0; i < FIFO_DEPTH; i++)
+                rd_popcount = rd_popcount + POS_WIDTH'(wq2_rptr_sync1[i]);
         end
 
+        // Convert Johnson counter to linear position (0 ~ 2*FIFO_DEPTH-1)
+        assign wr_pos = wptr_async_inner_SIZE_ONLY[FIFO_DEPTH-1] ?
+                         (POS_WIDTH'(CYCLE_LEN) - wr_popcount) : wr_popcount;
+        assign rd_pos = wq2_rptr_sync1[FIFO_DEPTH-1] ?
+                         (POS_WIDTH'(CYCLE_LEN) - rd_popcount) : rd_popcount;
+
+        // Fill level = (wr_pos - rd_pos) mod (2 * FIFO_DEPTH)
+        assign fill_raw   = (wr_pos >= rd_pos) ?
+                            (wr_pos - rd_pos) :
+                            (POS_WIDTH'(CYCLE_LEN) + wr_pos - rd_pos);
+        assign fill_level = fill_raw[FILL_WIDTH-1:0];
+
         always_ff @( posedge clk_marker or negedge rst_n ) begin
             if(~rst_n)
-                almost_full <= 'b0;
-            else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
-                almost_full <= 1'b1;
-            else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && winc && ~rinc_fake)
-                almost_full <= 1'b1;
-            else 
                 almost_full <= 1'b0;
+            else if(clear)
+                almost_full <= 1'b0;
+            else
+                almost_full <= (fill_level >= FILL_WIDTH'(ALMOST_FULL_THRESHOLD));
         end
     end else begin
         assign almost_full  = 1'b0;
