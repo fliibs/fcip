@@ -15,7 +15,7 @@
 -f $FCIP_DIR/vc/sync_fifo.f
 -f $FCIP_DIR/vc/handshake.f
 
-`ifndef SYNTHESIS
-    -f $FCIP_DIR/vc/mem_model.f
-    $FCIP_DIR/tb/fcip_top.sv
+`ifdef ASIC_SIM
+-f $FCIP_DIR/vc/mem_model.f
+-f $FCIP_DIR/tb/fcip_top.sv
 `endif
