@@ -288,17 +288,20 @@ endgenerate
 
 logic                   reg_slice_vld_r;
 logic [DATA_WIDTH:0]    reg_slice_pld_r;
+logic                   reg_slice_gen_rdy;
 
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
-assign read_out_rdy         = ~reg_slice_vld_r || m_rdy;
+
+assign reg_slice_gen_rdy    = m_rdy || (AUTO_CLEAR_EN && reg_slice_vld_r && ~reg_slice_pld_r[0]);
+assign read_out_rdy         = ~reg_slice_vld_r || reg_slice_gen_rdy;
 
 always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         reg_slice_vld_r <= 1'b0;
     else if(read_out_vld && read_out_rdy)
         reg_slice_vld_r <= 1'b1;
-    else if(m_rdy)
+    else if(reg_slice_gen_rdy)
         reg_slice_vld_r <= 1'b0;
 end
 

@@ -185,16 +185,6 @@ assign empty = ~(|((rptr_async_inner_SIZE_ONLY ^ rq2_wptr_sync1) & rptr_sync_inn
 generate 
     if(THRESHOLD_EN) begin:THRESHOLD_EN_OPEN
 
-        // ---------------------------------------------------------------
-        // Johnson counter based fill level computation (read domain)
-        //
-        // Same approach as slv side: convert Johnson counter pointers to
-        // linear positions, compute fill level via modular subtraction.
-        //
-        // Synchronized write pointer may lag, giving conservative (lower)
-        // fill estimate — safe for almost_empty detection.
-        // ---------------------------------------------------------------
-
         localparam int unsigned POS_WIDTH  = PTR_WIDTH + 2;
         localparam int unsigned FILL_WIDTH = PTR_WIDTH + 1;
         localparam int unsigned CYCLE_LEN  = 2 * FIFO_DEPTH;
@@ -252,17 +242,20 @@ endgenerate
 
 logic                   reg_slice_vld_r;
 logic [DATA_WIDTH:0]    reg_slice_pld_r;
+logic                   reg_slice_gen_rdy;
 
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
-assign read_out_rdy         = ~reg_slice_vld_r || m_rdy;
+
+assign reg_slice_gen_rdy    = m_rdy || (AUTO_CLEAR_EN && reg_slice_vld_r && ~reg_slice_pld_r[0]);
+assign read_out_rdy         = ~reg_slice_vld_r || reg_slice_gen_rdy;
 
 always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         reg_slice_vld_r <= 1'b0;
     else if(read_out_vld && read_out_rdy)
         reg_slice_vld_r <= 1'b1;
-    else if(m_rdy)
+    else if(reg_slice_gen_rdy)
         reg_slice_vld_r <= 1'b0;
 end
 
