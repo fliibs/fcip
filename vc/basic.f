@@ -1,5 +1,5 @@
 $FCIP_DIR/ip/basic/fcip_bin2onehot.sv
-$FCIP_DIR/ip/basic/fcip_booth_wallace_mul.sv
+// $FCIP_DIR/ip/basic/fcip_booth_wallace_mul.sv
 $FCIP_DIR/ip/basic/fcip_ip_mimo_queue.sv
 $FCIP_DIR/ip/basic/fcip_lead_one.sv
 $FCIP_DIR/ip/basic/fcip_lead_one_msb.sv

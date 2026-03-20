@@ -48,7 +48,7 @@ generate
         end 
 
         always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n)                pld_m_r  <= 1'b0;
+            if(~rst_n)                pld_m_r  <= {(PLD_WIDTH){1'b0}};
             else if (vld_m && ~rdy_m) pld_m_r  <= m_pld;
         end 
     
