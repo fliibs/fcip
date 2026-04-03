@@ -40,9 +40,12 @@ module fcip_reg_slice #(
         else if(RS_TYPE==2) begin:rs_backward
             logic                   vld_r; 
             PLD_TYPE                pld_r;
+            logic                   rdy_r;
 
             assign m_vld = s_vld | vld_r;
             assign m_pld = vld_r ? pld_r : s_pld;
+
+            assign s_rdy = rdy_r | (~vld_r);
 
             always @(posedge clk or negedge rst_n) begin 
                 if(~rst_n)                              vld_r <= 1'b0;
@@ -51,8 +54,8 @@ module fcip_reg_slice #(
             end 
 
             always @(posedge clk or negedge rst_n) begin 
-                if(~rst_n)                              s_rdy <= 1'b1;
-                else                                    s_rdy <= m_rdy;
+                if(~rst_n)                              rdy_r <= 1'b1;
+                else                                    rdy_r <= m_rdy;
             end
 
             always @(posedge clk) begin 
