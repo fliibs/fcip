@@ -1,6 +1,6 @@
 module fcip_arb_vrp #(
     parameter MODE      = 3, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
-    parameter HSK_MODE  = 1, // 0: Pass 1: 1-Cycle
+    parameter HSK_MODE  = 1, // 0: Pass 1: backward reg slice 
     parameter WIDTH     = 4,
     parameter PRIORITY  = {WIDTH{1'b0}},
     parameter PLD_WIDTH = 32
@@ -24,37 +24,46 @@ logic [WIDTH-1:0]       v_rdy;
 
 logic [PLD_WIDTH-1:0]   m_pld;
 logic                   m_vld;
+logic                   m_rdy;
 
 assign v_vld = v_vld_s;
-assign v_rdy_s = v_grant & {WIDTH{rdy_m}};
+assign v_rdy_s = v_grant & {WIDTH{m_rdy}};
 assign m_vld = |v_vld_s;
 
 generate 
     if(HSK_MODE==0) begin
         assign vld_m   = m_vld;
         assign pld_m   = m_pld;
+        assign m_rdy   = rdy_m;
         
     end else if(HSK_MODE==1) begin 
         logic                   vld_m_r;
         logic [PLD_WIDTH-1:0]   pld_m_r;
+        logic                   rdy_m_r;
 
-        assign vld_m   = vld_m_r || m_vld;
+        assign vld_m   = vld_m_r | m_vld;
         assign pld_m   = vld_m_r ? pld_m_r : m_pld;
+        assign m_rdy   = rdy_m_r | (~vld_m_r);
 
         always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n)                vld_m_r  <= 1'b0;
-            else if (vld_m && ~rdy_m) vld_m_r  <= m_vld;
-            else if (vld_m && rdy_m)  vld_m_r  <= 1'b0;
+            if(~rst_n)                              vld_m_r  <= 1'b0;
+            else if (m_vld && ~vld_m_r && ~rdy_m)   vld_m_r  <= 1'b1;
+            else if (rdy_m)                         vld_m_r  <= 1'b0;
         end 
 
-        always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n)                pld_m_r  <= {(PLD_WIDTH){1'b0}};
-            else if (vld_m && ~rdy_m) pld_m_r  <= m_pld;
+        always @(posedge clk) begin 
+            if (m_vld && ~vld_m_r && ~rdy_m)        pld_m_r  <= m_pld;
         end 
+
+        always_ff @(posedge clk or negedge rst_n) begin : blockName
+            if(~rst_n)                rdy_m_r  <= 1'b1;
+            else                      rdy_m_r  <= rdy_m;
+        end
     
     end else begin 
         assign vld_m   = m_vld;
         assign pld_m   = m_pld;
+        assign m_rdy   = rdy_m;
     end 
 endgenerate
 
