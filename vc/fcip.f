@@ -17,5 +17,5 @@
 
 `ifndef SYNTHESIS
     -f $FCIP_DIR/vc/mem_model.f
-    $FCIP_DIR/tb/fcip_top.sv
+    //$FCIP_DIR/tb/fcip_top.sv
 `endif
