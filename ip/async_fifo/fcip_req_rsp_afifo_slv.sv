@@ -5,7 +5,8 @@ module fcip_req_rsp_afifo_slv #(
     parameter integer unsigned REQ_WIDTH    = 32    ,
     parameter integer unsigned RSP_WIDTH    = 32    ,
     parameter integer unsigned VT_TYPE      = 1     ,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
-    localparam int unsigned PLD_SYNC_WIDTH = REQ_WIDTH+1
+    localparam int unsigned REQ_SYNC_WIDTH = REQ_WIDTH+1,
+    localparam int unsigned RSP_SYNC_WIDTH = RSP_WIDTH+1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -31,13 +32,13 @@ module fcip_req_rsp_afifo_slv #(
     output  logic [FIFO_DEPTH-1:0]      req_wptr_async  ,
     input   logic [FIFO_DEPTH-1:0]      req_rptr_async  ,
     input   logic [FIFO_DEPTH-1:0]      req_rptr_sync   ,
-    output  logic [PLD_SYNC_WIDTH:0]    req_pld_sync    ,
+    output  logic [REQ_SYNC_WIDTH:0]    req_pld_sync    ,
 
     // response sync
     input   logic [FIFO_DEPTH-1:0]      rsp_wptr_async  ,
     output  logic [FIFO_DEPTH-1:0]      rsp_rptr_async  ,
     output  logic [FIFO_DEPTH-1:0]      rsp_rptr_sync   ,
-    input   logic [PLD_SYNC_WIDTH:0]    rsp_pld_sync    
+    input   logic [RSP_SYNC_WIDTH:0]    rsp_pld_sync    
 );
 
 logic                   rsp_full_zero;
@@ -123,7 +124,7 @@ fcip_afifo_mst #(
     logic        package_rsp_last_handshake;
 
     assign package_req_last_handshake = req_s_last && req_s_vld && req_s_rdy;
-    assign package_rsp_last_handshake = read_resp_last && read_resp_vld && read_resp_rdy;
+    assign package_rsp_last_handshake = rsp_m_last && rsp_m_vld && rsp_m_rdy;
 
     always_ff @( posedge clk or negedge rst_n ) begin
         if(~rst_n)

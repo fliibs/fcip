@@ -5,7 +5,8 @@ module fcip_req_rsp_afifo #(
     parameter integer unsigned REQ_WIDTH        = 32    ,
     parameter integer unsigned RSP_WIDTH        = 32    ,
     parameter integer unsigned VT_TYPE          = 1     ,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
-    localparam int unsigned PLD_SYNC_WIDTH      = REQ_WIDTH+1
+    localparam int unsigned REQ_SYNC_WIDTH      = REQ_WIDTH+1,
+    localparam int unsigned RSP_SYNC_WIDTH      = RSP_WIDTH+1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -40,13 +41,13 @@ module fcip_req_rsp_afifo #(
 logic [FIFO_DEPTH-1:0]      req_wptr_async  ;
 logic [FIFO_DEPTH-1:0]      req_rptr_async  ;
 logic [FIFO_DEPTH-1:0]      req_rptr_sync   ;
-logic [PLD_SYNC_WIDTH:0]    req_pld_sync    ;
+logic [REQ_SYNC_WIDTH:0]    req_pld_sync    ;
 
 // response sync
 logic [FIFO_DEPTH-1:0]      rsp_wptr_async  ;
 logic [FIFO_DEPTH-1:0]      rsp_rptr_async  ;
 logic [FIFO_DEPTH-1:0]      rsp_rptr_sync   ;
-logic [PLD_SYNC_WIDTH:0]    rsp_pld_sync    ;
+logic [RSP_SYNC_WIDTH:0]    rsp_pld_sync    ;
 
 fcip_req_rsp_afifo_slv #(
     .SYNC_STAGE    (SYNC_STAGE ),

@@ -5,7 +5,8 @@ module fcip_req_rsp_afifo_mst #(
     parameter integer unsigned REQ_WIDTH        = 32    ,
     parameter integer unsigned RSP_WIDTH        = 32    ,
     parameter integer unsigned VT_TYPE          = 1     ,// 0: SVT, 1: LVT, 2: ULVT, 3: ELVT, 4: LVTLL, 5: ULVTLL
-    localparam int unsigned PLD_SYNC_WIDTH      = REQ_WIDTH+1
+    localparam int unsigned REQ_SYNC_WIDTH      = REQ_WIDTH+1,
+    localparam int unsigned RSP_SYNC_WIDTH      = RSP_WIDTH+1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -26,13 +27,13 @@ module fcip_req_rsp_afifo_mst #(
     input   logic [FIFO_DEPTH-1:0]      req_wptr_async  ,
     output  logic [FIFO_DEPTH-1:0]      req_rptr_async  ,
     output  logic [FIFO_DEPTH-1:0]      req_rptr_sync   ,
-    input   logic [PLD_SYNC_WIDTH:0]    req_pld_sync    ,
+    input   logic [REQ_SYNC_WIDTH:0]    req_pld_sync    ,
 
     // response sync
     output  logic [FIFO_DEPTH-1:0]      rsp_wptr_async  ,
     input   logic [FIFO_DEPTH-1:0]      rsp_rptr_async  ,
     input   logic [FIFO_DEPTH-1:0]      rsp_rptr_sync   ,
-    output  logic [PLD_SYNC_WIDTH:0]    rsp_pld_sync    
+    output  logic [RSP_SYNC_WIDTH:0]    rsp_pld_sync    
 );
 
 logic                   req_ext_s_vld ;
@@ -42,7 +43,7 @@ logic                   req_ext_s_last;
 
 logic                   rsp_ext_m_vld ;
 logic                   rsp_ext_m_rdy ;
-logic [REQ_WIDTH:0]     rsp_ext_m_pld ;
+logic [RSP_WIDTH:0]     rsp_ext_m_pld ;
 logic                   rsp_ext_m_last;
 
 // request async fifo mst
