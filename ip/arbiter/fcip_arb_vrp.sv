@@ -18,6 +18,7 @@ module fcip_arb_vrp #(
 );
 
 logic [WIDTH-1:0]       v_grant;
+logic [WIDTH-1:0]       v_grant_hsk;
 
 logic [WIDTH-1:0]       v_vld;
 logic [WIDTH-1:0]       v_rdy;
@@ -27,7 +28,7 @@ logic                   m_vld;
 logic                   m_rdy;
 
 assign v_vld = v_vld_s;
-assign v_rdy_s = v_grant & {WIDTH{m_rdy}};
+assign v_rdy_s = v_grant_hsk & {WIDTH{m_rdy}};
 assign m_vld = |v_vld_s;
 
 generate 
@@ -35,6 +36,7 @@ generate
         assign vld_m   = m_vld;
         assign pld_m   = m_pld;
         assign m_rdy   = rdy_m;
+        assign v_grant_hsk = v_grant;
         
     end else if(HSK_MODE==1) begin 
         logic                   vld_m_r;
@@ -44,6 +46,7 @@ generate
         assign vld_m   = vld_m_r | m_vld;
         assign pld_m   = vld_m_r ? pld_m_r : m_pld;
         assign m_rdy   = rdy_m_r | (~vld_m_r);
+        assign v_grant_hsk = v_grant;
 
         always @(posedge clk or negedge rst_n) begin 
             if(~rst_n)                              vld_m_r  <= 1'b0;
@@ -60,10 +63,29 @@ generate
             else                      rdy_m_r  <= rdy_m;
         end
     
+    end else if(HSK_MODE==2) begin 
+        logic                   vld_m_r;
+        logic [WIDTH-1:0]       pld_m_r;
+
+        assign vld_m   = m_vld;
+        assign pld_m   = m_pld;
+        assign m_rdy   = rdy_m;
+        assign v_grant_hsk = vld_m_r ? pld_m_r : v_grant;
+
+        always @(posedge clk or negedge rst_n) begin 
+            if(~rst_n)                              vld_m_r  <= 1'b0;
+            else if (m_vld && ~vld_m_r && ~rdy_m)   vld_m_r  <= 1'b1;
+            else if (rdy_m)                         vld_m_r  <= 1'b0;
+        end 
+
+        always @(posedge clk) begin 
+            if (m_vld && ~vld_m_r && ~rdy_m)        pld_m_r  <= v_grant;
+        end
     end else begin 
         assign vld_m   = m_vld;
         assign pld_m   = m_pld;
         assign m_rdy   = rdy_m;
+        assign v_grant_hsk = v_grant;
     end 
 endgenerate
 
@@ -72,7 +94,7 @@ fcip_real_mux_onehot #(
     .WIDTH(WIDTH),
     .PLD_WIDTH(PLD_WIDTH)
 ) u_mux (
-    .select_onehot(v_grant),
+    .select_onehot(v_grant_hsk),
     .v_pld(v_pld_s),
     .select_pld(m_pld)
 );

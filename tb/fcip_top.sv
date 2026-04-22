@@ -1395,21 +1395,21 @@ fcip_mem_fake_2p_mem #(
 // fcip_sync_fifo_reg instance (already added in previous section, no duplication)
 
 // fcip_sync_fifo_reg_mimo instance
-fcip_sync_fifo_reg_mimo #(
-    .DEPTH    (128),
-    .WR_WIDTH (4),
-    .RD_WIDTH (4),
-    .PLD_TYPE (logic [31:0])
-) u_fcip_sync_fifo_reg_mimo (
-    .clk       (clk),
-    .rst_n     (rst_n),
-    .v_s_rdy   (fcip_sync_fifo_reg_mimo_v_s_rdy),
-    .v_s_vld   (fcip_sync_fifo_reg_mimo_v_s_vld),
-    .v_s_pld   (fcip_sync_fifo_reg_mimo_v_s_pld),
-    .v_m_vld   (fcip_sync_fifo_reg_mimo_v_m_vld),
-    .v_m_rdy   (fcip_sync_fifo_reg_mimo_v_m_rdy),
-    .v_m_pld   (fcip_sync_fifo_reg_mimo_v_m_pld)
-);
+// fcip_sync_fifo_reg_mimo #(
+//     .DEPTH    (128),
+//     .WR_WIDTH (4),
+//     .RD_WIDTH (4),
+//     .PLD_TYPE (logic [31:0])
+// ) u_fcip_sync_fifo_reg_mimo (
+//     .clk       (clk),
+//     .rst_n     (rst_n),
+//     .v_s_rdy   (fcip_sync_fifo_reg_mimo_v_s_rdy),
+//     .v_s_vld   (fcip_sync_fifo_reg_mimo_v_s_vld),
+//     .v_s_pld   (fcip_sync_fifo_reg_mimo_v_s_pld),
+//     .v_m_vld   (fcip_sync_fifo_reg_mimo_v_m_vld),
+//     .v_m_rdy   (fcip_sync_fifo_reg_mimo_v_m_rdy),
+//     .v_m_pld   (fcip_sync_fifo_reg_mimo_v_m_pld)
+// );
 
 // fcip_sfifo_spram_ctrl instance
 fcip_sfifo_spram_ctrl #(
