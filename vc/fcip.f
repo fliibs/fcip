@@ -9,6 +9,7 @@
 -f $FCIP_DIR/vc/arbiter.f
 -f $FCIP_DIR/vc/async_fifo.f
 -f $FCIP_DIR/vc/basic.f
+-f $FCIP_DIR/vc/ecc_codec.f
 -f $FCIP_DIR/vc/memory.f
 -f $FCIP_DIR/vc/regslice.f
 -f $FCIP_DIR/vc/stdcell_wrap.f
