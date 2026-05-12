@@ -2,8 +2,8 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned FIFO_DEPTH_PER_GROUP = 64,
     parameter  integer unsigned SRAM_GROUP_NUM = 2,
     parameter  integer unsigned DATA_WIDTH = 16,
-    parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
-    parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
+    //parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
+    //parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
     parameter  integer unsigned FORWARD_EN = 1,
     parameter  integer unsigned ROB_DEPTH = 16, //ROB DEPTH should be larger than MEM DATA PIPE Latency
     //for memory crl wrapper
@@ -11,10 +11,14 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned SRAM_REQ_PIPE_STAGE = 0,
     parameter  integer unsigned SRAM_RSP_PIPE_STAGE = 0,
     parameter  integer unsigned MCP_CYCLE = 1,
-    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP)
+    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP),
+    localparam int unsigned THRESHOLD_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM)
 )(
     input  logic                        clk,
     input  logic                        rst_n,
+
+    input  logic [THRESHOLD_WIDTH-1:0]  almost_full_threshold_val,
+    input  logic [THRESHOLD_WIDTH-1:0]  almost_empty_threshold_val,
 
     //power down
     input  logic                        stall,
@@ -120,13 +124,17 @@ fcip_sfifo_spram_ctrl #(
     .FIFO_DEPTH_PER_GROUP(FIFO_DEPTH_PER_GROUP),
     .SRAM_GROUP_NUM (SRAM_GROUP_NUM),
     .DATA_WIDTH(DATA_WIDTH),
-    .ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
-    .ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
+    //.ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
+    //.ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
     .FORWARD_EN(0),
     .SIDEBAND_WIDTH(MEM_SIDEBAND_WIDTH)
 )u_sfifo_spram_ctrl(
     .clk                    (clk             ),
     .rst_n                  (rst_n           ),
+
+    .almost_full_threshold_val (almost_full_threshold_val),
+    .almost_empty_threshold_val(almost_empty_threshold_val),
+
     .write_vld              (ram_write_vld   ),
     .write_pld              (ram_write_pld   ),
     .write_rdy              (ram_write_rdy   ),

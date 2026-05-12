@@ -1,13 +1,16 @@
-module fcip_sync_fifo_reg #(
+module fcip_sfifo_spram_reg #(
     parameter  integer unsigned FIFO_DEPTH = 16,
     parameter  integer unsigned FIFO_WIDTH = 16,
-    parameter  integer unsigned ALMOST_FULL_THRESHOLD  = 12,
-    parameter  integer unsigned ALMOST_EMPTY_THRESHOLD = 4 ,
+    //parameter  integer unsigned ALMOST_FULL_THRESHOLD  = 12,
+    //parameter  integer unsigned ALMOST_EMPTY_THRESHOLD = 4 ,
     parameter  integer unsigned FORWARD_EN = 1 ,
     localparam int unsigned CNT_WIDTH = $clog2(FIFO_DEPTH)
 )(
     input  logic                    clk,
     input  logic                    rst_n,
+
+    input   logic [CNT_WIDTH-1:0]   almost_full_threshold_val,
+    input   logic [CNT_WIDTH-1:0]   almost_empty_threshold_val,
 
     //power down
     input  logic                    stall,
@@ -117,9 +120,9 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_full <= 'b0;
     else if(clear)
         almost_full <= 'b0;
-    else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
+    else if( ptr_cnt >= almost_full_threshold_val)
         almost_full <= 1'b1;
-    else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && eff_winc && ~eff_rinc)
+    else if( (ptr_cnt == (almost_full_threshold_val-1)) && eff_winc && ~eff_rinc)
         almost_full <= 1'b1;
     else 
         almost_full <= 1'b0;
@@ -130,9 +133,9 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_empty <= 'b0;
     else if(clear)
         almost_empty <= 1'b1;
-    else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
+    else if(ptr_cnt <= almost_empty_threshold_val)
         almost_empty <= 1'b1;
-    else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD-1)) && eff_rinc && ~eff_winc)
+    else if( (ptr_cnt == (almost_empty_threshold_val-1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
     else 
         almost_empty <= 1'b0;

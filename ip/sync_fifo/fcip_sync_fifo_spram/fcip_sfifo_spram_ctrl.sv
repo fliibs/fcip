@@ -2,14 +2,18 @@ module fcip_sfifo_spram_ctrl #(
     parameter  integer unsigned FIFO_DEPTH_PER_GROUP = 64,
     parameter integer unsigned SRAM_GROUP_NUM  = 2,
     parameter integer unsigned DATA_WIDTH = 64,
-    parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
-    parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
+    //parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
+    //parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
     parameter integer unsigned FORWARD_EN = 1,
     parameter integer unsigned SIDEBAND_WIDTH = 1,
-    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP)
+    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP),
+    localparam int unsigned THRESHOLD_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM)
 )(
     input   logic                       clk,
     input   logic                       rst_n,
+
+    input   logic [THRESHOLD_WIDTH-1:0] almost_full_threshold_val,
+    input   logic [THRESHOLD_WIDTH-1:0] almost_empty_threshold_val,
 
     input   logic                       write_vld,
     input   logic [DATA_WIDTH-1:0]      write_pld,
@@ -41,8 +45,8 @@ logic [DATA_WIDTH-1:0]      ptr_ctrl_write_pld;
 logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_write_rdy;
 logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_read_vld;
 logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_read_rdy;
-logic                       ptr_ctrl_empty[SRAM_GROUP_NUM-1:0];
-logic                       ptr_ctrl_full[SRAM_GROUP_NUM-1:0];
+logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_empty;
+logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_full;
 
 logic                       lut_req_vld;
 logic [SRAM_GROUP_NUM-1:0]  lut_req_pld;
@@ -137,15 +141,19 @@ endgenerate
 /*========================================*/
 localparam  integer unsigned LUT_DEPTH = FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM;
 
-fcip_sync_fifo_reg #(
+fcip_sfifo_spram_reg #(
     .FIFO_DEPTH(LUT_DEPTH),
     .FIFO_WIDTH(SRAM_GROUP_NUM),
-    .ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
-    .ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
+    //.ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
+    //.ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
     .FORWARD_EN(0)
 )u_sfifo_spram_lut(
     .clk            (clk  ),
     .rst_n          (rst_n),
+
+    .almost_full_threshold_val (almost_full_threshold_val),
+    .almost_empty_threshold_val(almost_empty_threshold_val),
+
     .stall          (1'b0),
     .clear          (1'b0),
     .idle           (),
@@ -197,7 +205,7 @@ assign lut_full     = ram_lut_full;
 assign lut_resp_rdy = ~rob_almost_full && (|ptr_ctrl_read_rdy); //TODO
 
 assign spram_ctrl_empty     = ~(|ptr_ctrl_read_rdy) || ram_lut_empty;
-assign spram_ctrl_full      = ram_lut_full;
+assign spram_ctrl_full      = ram_lut_full || (&ptr_ctrl_full);
 
 /*========================================*/
 /*           read delay control           */
