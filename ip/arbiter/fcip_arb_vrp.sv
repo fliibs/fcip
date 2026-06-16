@@ -118,12 +118,27 @@ generate
             .v_vld      (v_vld),
             .v_grant    (v_grant)
         );
+    end else if(MODE==4) begin 
+        logic               alloc_en;
+
+        assign alloc_en = m_vld&&m_rdy; 
+        
+        fcip_grant_gen_rr_back #(
+            .WIDTH(WIDTH)
+        ) u_arb (
+            .clk        (clk),
+            .rst_n      (rst_n),
+            .v_vld      (v_vld),
+            .alloc_en   (alloc_en),
+            .v_grant    (v_grant)
+        );
+
     end else if(MODE==2) begin 
         logic               alloc_en;
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = rdy_m&&vld_m; 
+        assign alloc_en = m_vld&&m_rdy; 
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_age #(
@@ -148,7 +163,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = rdy_m&&vld_m; 
+        assign alloc_en = m_vld&&m_rdy; 
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_plru_tree #(
