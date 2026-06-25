@@ -1388,7 +1388,9 @@ fcip_mem_fake_2p_mem #(
     .spram_bit_en       (fcip_mem_fake_2p_mem_spram_bit_en),
     .stall              (fcip_mem_fake_2p_mem_stall),
     .clear              (fcip_mem_fake_2p_mem_clear),
-    .idle               (fcip_mem_fake_2p_mem_idle)
+    .idle               (fcip_mem_fake_2p_mem_idle),
+    .mem_ecc_sb_err     (),
+    .mem_ecc_db_err     ()
 );
 
 // ============================================================

@@ -47,7 +47,11 @@ module fcip_mem_fake_2p_mem
     //lowpower
     input  logic                        stall,
     input  logic                        clear,
-    output logic                        idle
+    output logic                        idle,
+
+    //ECC check
+    output logic                        mem_ecc_sb_err,
+    output logic                        mem_ecc_db_err
 );
 
 localparam int unsigned FIFO_THRESHOLD  = READ_BUFFER_SIZE-1;
@@ -229,11 +233,6 @@ generate
     end
 endgenerate
 
-/*========================================*/
-/*                ECC decode              */
-/*========================================*/
-
-//add future
 
 /*========================================*/
 /*              Memory Wrapper            */
