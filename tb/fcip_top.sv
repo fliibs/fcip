@@ -1275,7 +1275,8 @@ fcip_mem_ctrl_wrap #(
     .SIDEBAND_WIDTH     (1),
     .DATA_WIDTH         (32),
     .ADDR_WIDTH         (10),
-    .MCP_CYCLE          (1)
+    .MCP_CYCLE          (1),
+    .ECC_EN             (0)
 ) u_fcip_mem_ctrl_wrap (
     .clk            (clk),
     .rst_n          (rst_n),
@@ -1294,7 +1295,9 @@ fcip_mem_ctrl_wrap #(
     .spram_dout     (fcip_mem_ctrl_wrap_spram_dout),
     .spram_bit_en   (fcip_mem_ctrl_wrap_spram_bit_en),
     .spram_en       (fcip_mem_ctrl_wrap_spram_en),
-    .spram_wren     (fcip_mem_ctrl_wrap_spram_wren)
+    .spram_wren     (fcip_mem_ctrl_wrap_spram_wren),
+    .ecc_sb_err     (),
+    .ecc_db_err     ()
 );
 
 // fcip_mem_fake_find_new_bit instance

@@ -11,6 +11,7 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned SRAM_REQ_PIPE_STAGE = 0,
     parameter  integer unsigned SRAM_RSP_PIPE_STAGE = 0,
     parameter  integer unsigned MCP_CYCLE = 1,
+    parameter  integer unsigned ECC_EN = 0,
     localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP),
     localparam int unsigned THRESHOLD_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM)
 )(
@@ -185,7 +186,8 @@ generate
             .SIDEBAND_WIDTH(MEM_SIDEBAND_WIDTH),
             .DATA_WIDTH(DATA_WIDTH),
             .ADDR_WIDTH(ADDR_WIDTH),
-            .MCP_CYCLE(MCP_CYCLE)
+            .MCP_CYCLE(MCP_CYCLE),
+            .ECC_EN(ECC_EN)
         )u_fifo_spram_mem_ctrl(
             .clk                 (clk             ),
             .rst_n               (rst_n           ),
@@ -206,7 +208,10 @@ generate
             .spram_dout          (spram_dout[i]),
             .spram_en            (spram_en[i]  ),
             .spram_wren          (spram_wren[i]),
-            .spram_bit_en        (spram_bit_en[i])
+            .spram_bit_en        (spram_bit_en[i]),
+
+            .ecc_sb_err          (),
+            .ecc_db_err          ()
         );
 
     end
