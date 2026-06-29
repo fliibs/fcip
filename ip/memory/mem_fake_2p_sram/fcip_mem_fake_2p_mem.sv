@@ -118,6 +118,9 @@ generate
         assign write_sram_addr  = write_req_addr;
         assign write_req_rdy    = write_sram_rdy;
 
+        assign write_sram_bit_en = write_req_bit_en;
+        assign write_buffer_empty = 1'b1;
+
     end else begin
         fcip_mem_fake_write_buffer #(
             .ADDR_WIDTH         (ADDR_WIDTH),

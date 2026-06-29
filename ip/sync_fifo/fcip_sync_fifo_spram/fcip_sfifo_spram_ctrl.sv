@@ -65,6 +65,7 @@ logic                       ram_lut_full;
 
 logic                       lut_full;
 
+logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_sram_rdy;
 /*========================================*/
 /*             sram write alloc           */
 /*========================================*/
@@ -202,9 +203,15 @@ assign lut_req_pld  = spram_ctrl_write_handshake;
 assign lut_req_vld  = |spram_ctrl_write_handshake;
 assign lut_full     = ram_lut_full;
 
-assign lut_resp_rdy = ~rob_almost_full && (|ptr_ctrl_read_rdy); //TODO
+generate 
+    for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin
+        assign ptr_ctrl_sram_rdy[i] = ptr_ctrl_read_rdy[i] && lut_resp_pld[i];
+    end
+endgenerate
 
-assign spram_ctrl_empty     = ~(|ptr_ctrl_read_rdy) || ram_lut_empty;
+assign lut_resp_rdy = ~rob_almost_full && (|ptr_ctrl_read_rdy) && (|ptr_ctrl_sram_rdy);
+
+assign spram_ctrl_empty     = ~(|ptr_ctrl_read_rdy) || ram_lut_empty && ~lut_resp_vld;
 assign spram_ctrl_full      = ram_lut_full || (&ptr_ctrl_full);
 
 /*========================================*/

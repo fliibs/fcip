@@ -55,7 +55,6 @@ localparam int unsigned SRAM_DELAY_TOTAL            = SRAM_ACCESS_LATENCY + SRAM
 localparam int unsigned ROB_ALMOST_FULL_THRESHOLD   = ROB_DEPTH - SRAM_DELAY_TOTAL;
 localparam int unsigned MEM_SIDEBAND_WIDTH          = ROB_PTR_WIDTH;
 
-logic                           sram_empty;
 logic                           rob_write_vld;
 logic [DATA_WIDTH-1:0]          rob_write_pld;
 logic                           rob_write_rdy;
@@ -66,9 +65,6 @@ logic                           sram_req_vld;
 logic [DATA_WIDTH-1:0]          sram_req_pld;
 logic                           sram_req_rdy;
 logic [ROB_PTR_WIDTH-1:0]       sram_req_id;
-logic                           read_vld;
-logic [DATA_WIDTH-1:0]          read_pld;
-logic                           read_rdy;
 logic                           rob_almost_empty;
 logic                           rob_almost_full;
 logic                           sram_pre_winc;

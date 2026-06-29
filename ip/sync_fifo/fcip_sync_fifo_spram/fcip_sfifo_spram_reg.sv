@@ -86,7 +86,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
     else if(clear)
         rd_ptr <= 'b0;
     else if(eff_rinc)
-        rd_ptr <= (rd_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? '0 : rd_ptr + 1'b1;
+        rd_ptr <= (rd_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? 'b0 : (rd_ptr + 1'b1);
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
@@ -95,7 +95,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
     else if(clear)
         wr_ptr <= 'b0;
     else if(eff_winc)
-        wr_ptr <= (wr_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? '0 : wr_ptr + 1'b1;
+        wr_ptr <= (wr_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? 'b0 : (wr_ptr + 1'b1);
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
@@ -117,12 +117,14 @@ end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        almost_full <= 'b0;
+        almost_full <= 1'b0;
     else if(clear)
-        almost_full <= 'b0;
-    else if( ptr_cnt >= almost_full_threshold_val)
-        almost_full <= 1'b1;
+        almost_full <= 1'b0;
     else if( (ptr_cnt == (almost_full_threshold_val-1)) && eff_winc && ~eff_rinc)
+        almost_full <= 1'b1;
+    else if( (ptr_cnt == almost_full_threshold_val) && ~eff_winc && eff_rinc)
+        almost_full <= 1'b0;
+    else if( ptr_cnt >= almost_full_threshold_val)
         almost_full <= 1'b1;
     else 
         almost_full <= 1'b0;
@@ -130,12 +132,14 @@ end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        almost_empty <= 'b0;
+        almost_empty <= 1'b0;
     else if(clear)
+        almost_empty <= 1'b0;
+    else if( (ptr_cnt == (almost_empty_threshold_val+1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
+    else if( (ptr_cnt == almost_empty_threshold_val) && ~eff_rinc && eff_winc)
+        almost_empty <= 1'b0;
     else if(ptr_cnt <= almost_empty_threshold_val)
-        almost_empty <= 1'b1;
-    else if( (ptr_cnt == (almost_empty_threshold_val-1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
     else 
         almost_empty <= 1'b0;
@@ -147,11 +151,13 @@ end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        full <= 'b0;
+        full <= 1'b0;
     else if(clear)
         full <= 1'b0;
     else if( (ptr_cnt == (FIFO_DEPTH-1)) && eff_winc && ~eff_rinc)
         full <= 1'b1;
+    else if( (ptr_cnt == FIFO_DEPTH) && ~eff_winc && eff_rinc)
+        full <= 1'b0;
     else if( ptr_cnt <= (FIFO_DEPTH-1) )
         full <= 1'b0;
 end
@@ -163,6 +169,8 @@ always_ff @( posedge clk or negedge rst_n ) begin
         empty <= 1'b1;
     else if( (ptr_cnt == 1) && eff_rinc && ~eff_winc )
         empty <= 1'b1;
+    else if( (ptr_cnt == 0) && ~eff_rinc && eff_winc )
+        empty <= 1'b0;
     else if( ptr_cnt >= 1 )
         empty <= 1'b0;
 end
@@ -175,6 +183,8 @@ generate
     for(genvar i=0;i<FIFO_DEPTH;i++)begin
         always_ff @( posedge clk or negedge rst_n ) begin : DATA_ARRAY
             if(~rst_n)
+                array_data[i] <= 'b0;
+            else if(clear)
                 array_data[i] <= 'b0;
             else if( winc && (wr_ptr==i))
                 array_data[i] <= write_req_pld;

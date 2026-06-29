@@ -48,7 +48,7 @@ generate
 
         logic forward_enable;
 
-        assign forward_enable   = empty && read_resp_rdy;
+        assign forward_enable   = empty && read_resp_rdy && ~stall;
         assign read_resp_pld    = forward_enable ? write_req_pld : array_data[rd_ptr];
         assign read_resp_vld    = forward_enable ? write_req_vld : ~empty;
 
@@ -70,8 +70,8 @@ endgenerate
 assign idle = empty;
 
 // Effective read/write increment gated by stall
-assign eff_rinc = rinc ;
-assign eff_winc = winc ;
+assign eff_rinc = rinc;
+assign eff_winc = winc;
 
 /*========================================*/
 /*           read & write counter         */
@@ -117,9 +117,11 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_full <= 'b0;
     else if(clear)
         almost_full <= 'b0;
-    else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
-        almost_full <= 1'b1;
     else if( (ptr_cnt == (ALMOST_FULL_THRESHOLD-1)) && eff_winc && ~eff_rinc)
+        almost_full <= 1'b1;
+    else if( (ptr_cnt == ALMOST_FULL_THRESHOLD) && ~eff_winc && eff_rinc)
+        almost_full <= 1'b0;
+    else if( ptr_cnt >= ALMOST_FULL_THRESHOLD)
         almost_full <= 1'b1;
     else 
         almost_full <= 1'b0;
@@ -129,10 +131,12 @@ always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
         almost_empty <= 'b0;
     else if(clear)
+        almost_empty <= 1'b0;
+    else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD+1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
+    else if( (ptr_cnt == ALMOST_EMPTY_THRESHOLD) && ~eff_rinc && eff_winc)
+        almost_empty <= 1'b0;
     else if(ptr_cnt <= ALMOST_EMPTY_THRESHOLD)
-        almost_empty <= 1'b1;
-    else if( (ptr_cnt == (ALMOST_EMPTY_THRESHOLD-1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
     else 
         almost_empty <= 1'b0;
@@ -149,6 +153,8 @@ always_ff @( posedge clk or negedge rst_n ) begin
         full <= 1'b0;
     else if( (ptr_cnt == (FIFO_DEPTH-1)) && eff_winc && ~eff_rinc)
         full <= 1'b1;
+    else if( (ptr_cnt == FIFO_DEPTH) && ~eff_winc && eff_rinc)
+        full <= 1'b0;
     else if( ptr_cnt <= (FIFO_DEPTH-1) )
         full <= 1'b0;
 end
@@ -160,6 +166,8 @@ always_ff @( posedge clk or negedge rst_n ) begin
         empty <= 1'b1;
     else if( (ptr_cnt == 1) && eff_rinc && ~eff_winc )
         empty <= 1'b1;
+    else if( (ptr_cnt == 0) && ~eff_rinc && eff_winc )
+        empty <= 1'b0;
     else if( ptr_cnt >= 1 )
         empty <= 1'b0;
 end
@@ -172,6 +180,8 @@ generate
     for(genvar i=0;i<FIFO_DEPTH;i++)begin
         always_ff @( posedge clk or negedge rst_n ) begin : DATA_ARRAY
             if(~rst_n)
+                array_data[i] <= 'b0;
+            else if(clear)
                 array_data[i] <= 'b0;
             else if( winc && (wr_ptr==i))
                 array_data[i] <= write_req_pld;

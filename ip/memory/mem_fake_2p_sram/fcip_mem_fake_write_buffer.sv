@@ -46,7 +46,6 @@ typedef struct packed {
 } mem_fake_write_req_t;
 
 logic [CNT_WIDTH-1:0]           prealloc_entry;
-logic [WRITE_BUFFER_SIZE-1:0]   prealloc_entry_onehot;
 logic                           write_handshake;
 logic                           rel_write_entry;
 
@@ -133,7 +132,7 @@ generate
                 write_array_vld[i] <= 'b0;
             else if(clear)
                 write_array_vld[i] <= 'b0;
-            else if( rel_write_entry && (rd_ptr==i) )
+            else if( rel_write_entry && (rd_ptr_true==i) )
                 write_array_vld[i] <= 'b0;
             else if( (prealloc_entry == i) && write_handshake )
                 write_array_vld[i] <= 1'b1;
@@ -222,7 +221,7 @@ generate
 
         for(genvar j=0; j<WRITE_BUFFER_SIZE; j++ )begin
             assign cmp_hit_onehot[j]    = read_cmp_vld_1d && (read_cmp_addr_1d == write_array_data[j].write_addr) && write_array_vld[j];
-            assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr-1))); 
+            assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr_true-1))); 
         end 
 
         for(genvar i=0;i<DATA_WIDTH;i++)begin:SEL_READ_HIT_BIT

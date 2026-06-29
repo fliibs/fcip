@@ -35,14 +35,14 @@ logic                   rob_winc;
 logic                   sram_winc;
 logic                   rinc;
 logic                   winc_incr;
-logic                   winc_vld;
+//logic                   winc_vld;
 logic [DATA_WIDTH-1:0]  array_data[ROB_DEPTH-1:0];
 logic [ROB_DEPTH-1:0]   array_vld;
-logic [DATA_WIDTH-1:0]  winc_data;
+//logic [DATA_WIDTH-1:0]  winc_data;
 
 logic [PTR_WIDTH-1:0]   rob_wptr;
 logic [PTR_WIDTH-1:0]   rob_rptr;
-logic [PTR_WIDTH-1:0]   rob_vld_ptr_id;
+//logic [PTR_WIDTH-1:0]   rob_vld_ptr_id;
 logic [PTR_WIDTH:0]     ptr_cnt;
 
 
@@ -56,25 +56,27 @@ generate
         logic                   entry_read_vld;
         logic                   direct_forward_en;
         logic                   sram_forward_en;
-        logic                   rob_forward_en;
+        //logic                   rob_forward_en;
         logic                   rob_forward_vld;
         logic [DATA_WIDTH-1:0]  rob_forward_pld;
+        logic                   sram_forward_ptr_vld;
         
-        assign direct_forward_en= rob_empty && read_rdy;
-        assign sram_forward_en  = ram_req_rdy && read_rdy && (ram_req_id==rob_rptr);
-        assign rob_forward_en   = direct_forward_en || sram_forward_en;
+        assign direct_forward_en    = (ptr_cnt == 0) && read_rdy && rob_req_vld;
+        assign sram_forward_ptr_vld = (ram_req_id == rob_rptr) && ~rob_empty;
+        assign sram_forward_en      = ram_req_rdy && read_rdy && sram_forward_ptr_vld && ram_req_vld;
+        //assign rob_forward_en   = direct_forward_en || sram_forward_en;
 
-        assign rob_forward_vld  = ram_req_vld || rob_req_vld;
-        assign rob_forward_pld  = direct_forward_en ? rob_req_pld : ram_req_pld;
+        assign rob_forward_vld  = sram_forward_en || direct_forward_en;
+        assign rob_forward_pld  = sram_forward_en ? ram_req_pld : rob_req_pld;
         assign entry_read_vld   = ~rob_empty && array_vld[rob_rptr];
 
         //out response
-        assign read_vld         = rob_forward_en ? rob_forward_vld : entry_read_vld;
-        assign read_pld         = rob_forward_en ? rob_forward_pld : array_data[rob_rptr];
+        assign read_vld         = rob_forward_vld || entry_read_vld;
+        assign read_pld         = rob_forward_vld ? rob_forward_pld : array_data[rob_rptr];
 
         //rob entry ptr inc
         assign rob_winc         = rob_req_vld && rob_req_rdy && ~direct_forward_en;
-        assign rinc             = (entry_read_vld && read_rdy) || (sram_forward_en && ram_req_vld);
+        assign rinc             = (entry_read_vld && read_rdy) || sram_forward_en ;
 
     end else begin
 
@@ -93,9 +95,9 @@ assign ram_req_rdy       = ~rob_full;
 assign rob_req_rdy       = ~rob_full;
 
 assign winc_incr         = sram_pre_winc || rob_winc;
-assign winc_vld          = sram_winc || rob_winc;
-assign rob_vld_ptr_id    = sram_winc ? ram_req_id : rob_wptr;
-assign winc_data         = sram_winc ? ram_req_pld : rob_req_pld;
+//assign winc_vld          = sram_winc || rob_winc;
+//assign rob_vld_ptr_id    = sram_winc ? ram_req_id : rob_wptr;
+//assign winc_data         = sram_winc ? ram_req_pld : rob_req_pld;
 
 assign rob_prealloc_id   = rob_wptr;
 
@@ -186,8 +188,12 @@ generate
     for(genvar i=0;i<ROB_DEPTH;i++)begin
 
         always_ff @( posedge clk ) begin
-            if(winc_vld && (rob_vld_ptr_id==i))
-                array_data[i] <= winc_data;
+            if(~rst_n)
+                array_data[i] <= {(DATA_WIDTH){1'b0}};
+            else if(sram_winc && (ram_req_id==i))
+                array_data[i] <= ram_req_pld;
+            else if(rob_winc && (rob_wptr==i))
+                array_data[i] <= rob_req_pld;
         end
 
         always_ff @( posedge clk or negedge rst_n) begin
@@ -195,7 +201,9 @@ generate
                 array_vld[i] <= 1'b0;
             else if(rinc && (rob_rptr==i) )
                 array_vld[i] <= 1'b0;
-            else if(winc_vld && (rob_vld_ptr_id==i))
+            else if(sram_winc && (ram_req_id==i))
+                array_vld[i] <= 1'b1;
+            else if(rob_winc && (rob_wptr==i))
                 array_vld[i] <= 1'b1;
         end
 
