@@ -12,7 +12,9 @@ module fcip_mem_fake_2p_mem
     parameter integer unsigned READ_FORWARD_EN = 1,
     parameter integer unsigned READ_BUFFER_SIZE = 4,
     parameter integer unsigned WRITE_BIT_MASK_EN = 1,
-    parameter integer unsigned ECC_EN = 0
+    parameter integer unsigned ECC_EN = 0,
+    localparam integer unsigned MEM_CODE_WIDTH = ($clog2(DATA_WIDTH)+DATA_WIDTH+1 <= 2**$clog2(DATA_WIDTH))? $clog2(DATA_WIDTH) : $clog2(DATA_WIDTH) + 1,
+    localparam integer unsigned MEM_TOTAL_WIDTH = DATA_WIDTH + MEM_CODE_WIDTH + 1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -37,12 +39,12 @@ module fcip_mem_fake_2p_mem
     input  logic                        read_resp_rdy,
 
     //mem port
-    output logic [ADDR_WIDTH-1:0]       spram_addr,
-    input  logic [DATA_WIDTH-1:0]       spram_dout,
-    output logic [DATA_WIDTH-1:0]       spram_din,
-    output logic                        spram_en,
-    output logic                        spram_wren,
-    output logic [DATA_WIDTH -1 : 0]    spram_bit_en,
+    output logic [ADDR_WIDTH-1:0]                                      spram_addr,
+    input  logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_dout,
+    output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_din,
+    output logic                                                       spram_en,
+    output logic                                                       spram_wren,
+    output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_bit_en,
 
     //lowpower
     input  logic                        stall,

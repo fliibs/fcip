@@ -29,7 +29,7 @@ module fcip_mem_ctrl_wrap #(
     output logic [ADDR_WIDTH -1 : 0]                                spram_addr,
     output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]    spram_din,
     input  logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]    spram_dout,
-    output logic [DATA_WIDTH -1 : 0]                                spram_bit_en,
+    output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]    spram_bit_en,
     output logic                                                    spram_en,
     output logic                                                    spram_wren,
 
@@ -80,10 +80,10 @@ generate
 
         logic [MEM_TOTAL_WIDTH-1 : 0] mem_req_data_ecc;
         logic [MEM_TOTAL_WIDTH-1 : 0] mem_req_data_ecc_1d;
-        logic                         mem_req_addr_1d     ;
+        logic [ADDR_WIDTH-1:0]        mem_req_addr_1d     ;
         logic                         mem_req_handshake_1d;
         logic                         mem_req_wren_1d     ;
-        logic                         mem_req_bit_en_1d   ;
+        logic [MEM_TOTAL_WIDTH-1 : 0] mem_req_bit_en_1d   ;
 
         fcip_ecc_enc #(
             .DATA_WIDTH(DATA_WIDTH)
@@ -104,7 +104,7 @@ generate
                 mem_req_data_ecc_1d  <= mem_req_data_ecc;
                 mem_req_handshake_1d <= mem_req_handshake;
                 mem_req_wren_1d      <= mem_req_opcode==1;
-                mem_req_bit_en_1d    <= (mem_req_opcode==1) ? mem_req_bit_en : {(DATA_WIDTH){1'b1}};
+                mem_req_bit_en_1d    <= (mem_req_opcode==1) ? {mem_req_bit_en,{(MEM_TOTAL_WIDTH-DATA_WIDTH){1'b1}}} : {(DATA_WIDTH){1'b1}};
             end
         end
 
@@ -148,8 +148,8 @@ generate
         always @(posedge clk or negedge rst_n) begin
             if(~rst_n) begin
                 spram_dout_decc_1d      <= 'b0;
-                ecc_sb_err              <= 'b0;
-                ecc_db_err              <= 'b0;
+                ecc_sb_err_1d           <= 'b0;
+                ecc_db_err_1d           <= 'b0;
             end else begin
                 spram_dout_decc_1d      <= spram_dout_decc;
                 ecc_sb_err_1d           <= ecc_sb_err_decc;
