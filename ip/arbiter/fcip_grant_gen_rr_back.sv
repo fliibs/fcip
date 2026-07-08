@@ -4,7 +4,6 @@ module fcip_grant_gen_rr_back #(
     input               clk,
     input               rst_n,
     input   [WIDTH-1:0] v_vld,
-    input               alloc_en,
     output  [WIDTH-1:0] v_grant
 );
 
@@ -23,9 +22,9 @@ logic [WIDTH-1:0] unmask_grant_no_mask;
 always @(posedge clk or negedge rst_n) begin
     if(~rst_n) begin
         prio_reg <= {WIDTH{1'b1}};
-    end else if(|vld_mask && alloc_en) begin 
+    end else if(|vld_mask) begin 
         prio_reg <= mask_nxt_vld;
-    end else if(|v_vld && alloc_en) begin 
+    end else if(|v_vld) begin 
         prio_reg <= unmask_nxt_vld;
     end
 end

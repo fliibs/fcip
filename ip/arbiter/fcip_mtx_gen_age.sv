@@ -31,7 +31,14 @@ genvar k;
 generate
     for(k=0;k<WIDTH;k=k+1) begin: row_ 
         always @(posedge clk or negedge rst_n) begin 
-            if(~rst_n) vv_matrix[k] <= {WIDTH{1'b0}};
+            if(~rst_n) begin
+                if (k==0) begin
+                    vv_matrix[k] <= {WIDTH{1'b0}};
+                end
+                else begin
+                    vv_matrix[k] <= {{(WIDTH-k){1'b0}}, {k{1'b1}}};
+                end
+            end
             else vv_matrix[k] <= vv_matrix_tmp[k];
         end 
     end 
