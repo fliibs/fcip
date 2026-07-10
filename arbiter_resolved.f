@@ -1,0 +1,12 @@
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_arb_matrix.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_arb_vrp.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_fix_arb.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_grant_gen_fp.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_grant_gen_rr.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_mtx_gen_age.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_mtx_gen_plru_tree.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_tree_plru_comb.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_arb_vr_matrix.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_age_matrix_list.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_age_matrix.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/arbiter/fcip_arb_vrp_matrix.sv

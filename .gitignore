@@ -3,4 +3,8 @@
 
 
 csrc
-simv.daidir
+*.daidir
+simv
+vcs.log
+ucli.key
+**/work/

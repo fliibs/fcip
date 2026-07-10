@@ -1,9 +1,9 @@
 $COMMON_IP_PATH/rtl/others/cmn_list_lead_one.sv
-$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full.sv
-$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full_set.sv
-$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
-$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_backward.sv
-$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_forward.sv
+//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full.sv
+//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_full_set.sv
+//$COMMON_IP_PATH/rtl/others/cmn_booth_wallace_mul.sv
+//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_backward.sv
+//$COMMON_IP_PATH/rtl/regslice/bak/cmn_reg_slice_forward.sv
 $COMMON_IP_PATH/rtl/others/cmn_lead_one_msb.sv
 $COMMON_IP_PATH/rtl/others/cmn_ip_mimo_queue.sv
 $COMMON_IP_PATH/rtl/others/cmn_rob_prealloc.sv
@@ -36,7 +36,6 @@ $COMMON_IP_PATH/rtl/arbiter/cmn_grant_gen_fp.sv
 $COMMON_IP_PATH/rtl/memory/cmn_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_strb_dual_mem_model.sv
 $COMMON_IP_PATH/rtl/memory/cmn_single_mem_model.sv
-$COMMON_IP_PATH/rtl/memory/fcip_spram_model.sv
 
 -f $COMMON_IP_PATH/rtl/regslice/fcip_reg_slice.f
 
@@ -59,4 +58,3 @@ $COMMON_IP_PATH/rtl/fifo/async_fifo/fcip_req_rsp_afifo_slv.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_find_new_bit.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_write_buffer.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_2p_mem.sv
-
