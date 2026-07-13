@@ -47,7 +47,9 @@ module fcip_sync_fifo_spram #(
     input  logic [DATA_WIDTH -1 : 0]   spram_dout[SRAM_GROUP_NUM-1:0],
     output logic [SRAM_GROUP_NUM-1:0]  spram_en,
     output logic [SRAM_GROUP_NUM-1:0]  spram_wren,
-    output logic [DATA_WIDTH -1 : 0]   spram_bit_en[SRAM_GROUP_NUM-1:0]
+    output logic [DATA_WIDTH -1 : 0]   spram_bit_en[SRAM_GROUP_NUM-1:0],
+
+    output logic [SRAM_GROUP_NUM-1:0]  ecc_comp_err
 );
 
 localparam int unsigned ROB_PTR_WIDTH               = $clog2(ROB_DEPTH);
@@ -207,7 +209,8 @@ generate
             .spram_bit_en        (spram_bit_en[i]),
 
             .ecc_sb_err          (),
-            .ecc_db_err          ()
+            .ecc_db_err          (),
+            .ecc_comp_err        (ecc_comp_err[i])
         );
 
     end

@@ -34,7 +34,8 @@ module fcip_mem_ctrl_wrap #(
     output logic                                                    spram_wren,
 
     output logic                                                    ecc_sb_err,
-    output logic                                                    ecc_db_err
+    output logic                                                    ecc_db_err,
+    output logic                                                    ecc_comp_err
 );
 
 logic mem_req_handshake;
@@ -133,16 +134,19 @@ generate
         logic [DATA_WIDTH-1 : 0] spram_dout_decc_1d;
         logic                    ecc_sb_err_decc;
         logic                    ecc_db_err_decc;
+        logic                    ecc_comp_err_decc;
         logic                    ecc_sb_err_1d;
         logic                    ecc_db_err_1d;
+        logic                    ecc_comp_err_1d;
 
-        fcip_ecc_dec #(
+        fcip_ecc_dec_dcls #(
             .DATA_WIDTH  (DATA_WIDTH)
-        ) u_fcip_ecc_dec(
+        ) u_fcip_ecc_dec_dcls(
             .encode_data(spram_dout),
             .data       (spram_dout_decc),
             .sb_err     (ecc_sb_err_decc),
-            .db_err     (ecc_db_err_decc)
+            .db_err     (ecc_db_err_decc),
+            .comp_err   (ecc_comp_err_decc)
         );
 
         always @(posedge clk or negedge rst_n) begin
@@ -150,15 +154,18 @@ generate
                 spram_dout_decc_1d      <= 'b0;
                 ecc_sb_err_1d           <= 'b0;
                 ecc_db_err_1d           <= 'b0;
+                ecc_comp_err_1d         <= 'b0;
             end else begin
                 spram_dout_decc_1d      <= spram_dout_decc;
                 ecc_sb_err_1d           <= ecc_sb_err_decc;
                 ecc_db_err_1d           <= ecc_db_err_decc;
+                ecc_comp_err_1d         <= ecc_comp_err_decc;
             end
         end
 
-        assign ecc_sb_err       = ecc_sb_err_1d && mem_rsp_en;
-        assign ecc_db_err       = ecc_db_err_1d && mem_rsp_en;
+        assign ecc_sb_err   = ecc_sb_err_1d   && mem_rsp_en;
+        assign ecc_db_err   = ecc_db_err_1d   && mem_rsp_en;
+        assign ecc_comp_err = ecc_comp_err_1d && mem_rsp_en;
 
         fcip_marker #(
             .DATA_WIDTH(DATA_WIDTH)
@@ -176,8 +183,9 @@ generate
             .Z  (mem_rsp_data)
         );
 
-        assign ecc_sb_err = 1'b0;
-        assign ecc_db_err = 1'b0;
+        assign ecc_sb_err   = 1'b0;
+        assign ecc_db_err   = 1'b0;
+        assign ecc_comp_err = 1'b0;
 
     end
 endgenerate

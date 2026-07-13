@@ -53,7 +53,8 @@ module fcip_mem_fake_2p_mem
 
     //ECC check
     output logic                        mem_ecc_sb_err,
-    output logic                        mem_ecc_db_err
+    output logic                        mem_ecc_db_err,
+    output logic                        mem_ecc_comp_err
 );
 
 localparam int unsigned FIFO_THRESHOLD  = READ_BUFFER_SIZE-1;
@@ -111,6 +112,7 @@ logic                                   read_buffer_out_rdy;
 
 logic                                   spram_ecc_sb_err;
 logic                                   spram_ecc_db_err;
+logic                                   spram_ecc_comp_err;
 
 generate 
     if(WRITE_BUFFER_SIZE == 0)begin
@@ -208,6 +210,7 @@ generate
 
         assign mem_ecc_sb_err       = spram_ecc_sb_err;
         assign mem_ecc_db_err       = spram_ecc_db_err;
+        assign mem_ecc_comp_err     = spram_ecc_comp_err;
 
     end else if(WRITE_BIT_MASK_EN == 0)begin
 
@@ -218,6 +221,7 @@ generate
 
         assign mem_ecc_sb_err       = read_cmp_hit_delay ? 1'b0 : spram_ecc_sb_err;
         assign mem_ecc_db_err       = read_cmp_hit_delay ? 1'b0 : spram_ecc_db_err;
+        assign mem_ecc_comp_err     = read_cmp_hit_delay ? 1'b0 : spram_ecc_comp_err;
 
     end else begin
 
@@ -234,6 +238,7 @@ generate
         //bit mask don't support ecc
         assign mem_ecc_sb_err       = 1'b0;
         assign mem_ecc_db_err       = 1'b0;
+        assign mem_ecc_comp_err     = 1'b0;
 
     end
 endgenerate
@@ -275,7 +280,8 @@ fcip_mem_ctrl_wrap #(
         .spram_bit_en        (spram_bit_en    ),
 
         .ecc_sb_err          (spram_ecc_sb_err),
-        .ecc_db_err          (spram_ecc_db_err)
+        .ecc_db_err          (spram_ecc_db_err),
+        .ecc_comp_err        (spram_ecc_comp_err)
 );
 
 /*========================================*/
