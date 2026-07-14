@@ -207,7 +207,8 @@ generate
             .spram_bit_en        (spram_bit_en[i]),
 
             .ecc_sb_err          (),
-            .ecc_db_err          ()
+            .ecc_db_err          (),
+            .ecc_comp_err        ()
         );
 
     end

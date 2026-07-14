@@ -72,6 +72,8 @@ logic [SRAM_GROUP_NUM-1:0]  ptr_ctrl_sram_rdy;
 
 logic [SRAM_GROUP_NUM-1:0]      sram_write_rdy;
 logic [SRAM_GROUP_NUM-1:0]      sram_write_alloc;
+logic [SRAM_GROUP_NUM-1:0]      spram_ctrl_write_handshake;
+logic                           spram_ctrl_write_any_handshake;
 
 generate
     for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin
@@ -85,6 +87,7 @@ endgenerate
 
 assign write_rdy          = ~spram_ctrl_full;
 assign ptr_ctrl_write_pld = write_pld;
+assign spram_ctrl_write_any_handshake = |spram_ctrl_write_handshake;
 
 fcip_grant_gen_rr #(
     .WIDTH(SRAM_GROUP_NUM)
@@ -92,15 +95,14 @@ fcip_grant_gen_rr #(
     .clk    (clk),
     .rst_n  (rst_n),
 
-    .v_vld  (sram_write_rdy),
-    .v_grant(sram_write_alloc)
+    .v_vld   (sram_write_rdy),
+    .alloc_en(spram_ctrl_write_any_handshake),
+    .v_grant (sram_write_alloc)
 );
 
 /*========================================*/
 /*              sram ptr ctrl             */
 /*========================================*/
-
-logic [SRAM_GROUP_NUM-1:0] spram_ctrl_write_handshake;
 
 generate
     for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin:SRAM_GRP_PTR_CTRL
@@ -203,7 +205,7 @@ assign lut_req_pld  = spram_ctrl_write_handshake;
 assign lut_req_vld  = |spram_ctrl_write_handshake;
 assign lut_full     = ram_lut_full;
 
-generate 
+generate
     for(genvar i=0;i<SRAM_GROUP_NUM;i++)begin
         assign ptr_ctrl_sram_rdy[i] = ptr_ctrl_read_rdy[i] && lut_resp_pld[i];
     end

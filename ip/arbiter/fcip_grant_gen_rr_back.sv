@@ -22,9 +22,9 @@ logic [WIDTH-1:0] unmask_grant_no_mask;
 always @(posedge clk or negedge rst_n) begin
     if(~rst_n) begin
         prio_reg <= {WIDTH{1'b1}};
-    end else if(|vld_mask) begin 
+    end else if(|vld_mask) begin
         prio_reg <= mask_nxt_vld;
-    end else if(|v_vld) begin 
+    end else if(|v_vld) begin
         prio_reg <= unmask_nxt_vld;
     end
 end
@@ -33,7 +33,7 @@ end
 assign vld_mask = v_vld & prio_reg;
 
 // mask channel
-assign mask_nxt_vld[0] = 1'b0; 
+assign mask_nxt_vld[0] = 1'b0;
 assign mask_nxt_vld[WIDTH-1:1] = mask_nxt_vld[WIDTH-2:0] | vld_mask[WIDTH-2:0];
 assign mask_grant = (~mask_nxt_vld) & vld_mask;
 

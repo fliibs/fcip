@@ -46,7 +46,7 @@ logic                           eff_winc;
 /*            read/write control          */
 /*========================================*/
 
-generate 
+generate
     if(FORWARD_EN) begin
 
         logic forward_enable;
@@ -126,7 +126,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_full <= 1'b0;
     else if( ptr_cnt >= almost_full_threshold_val)
         almost_full <= 1'b1;
-    else 
+    else
         almost_full <= 1'b0;
 end
 
@@ -141,7 +141,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
         almost_empty <= 1'b0;
     else if(ptr_cnt <= almost_empty_threshold_val)
         almost_empty <= 1'b1;
-    else 
+    else
         almost_empty <= 1'b0;
 end
 
