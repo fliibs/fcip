@@ -9,6 +9,7 @@
 -f $FCIP_DIR/vc/arbiter.f
 -f $FCIP_DIR/vc/async_fifo.f
 -f $FCIP_DIR/vc/basic.f
+-f $FCIP_DIR/vc/ring_err_injc.f
 -f $FCIP_DIR/vc/ecc_codec.f
 -f $FCIP_DIR/vc/memory.f
 -f $FCIP_DIR/vc/regslice.f
@@ -18,5 +19,5 @@
 
 `ifndef SYNTHESIS
     -f $FCIP_DIR/vc/mem_model.f
-    $FCIP_DIR/tb/fcip_top.sv
+    //$FCIP_DIR/tb/fcip_top.sv
 `endif

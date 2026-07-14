@@ -37,7 +37,7 @@ logic                  winc,rinc;
 /*               write req                */
 /*========================================*/
 
-assign write_rdy    = ~ram_ctrl_full ; //TODO
+assign write_rdy    = ~ram_ctrl_full && mem_req_rdy ;
 assign winc         = write_vld && write_rdy;
 
 /*========================================*/
@@ -53,7 +53,7 @@ assign rinc     = read_vld && read_rdy;
 
 assign mem_req_vld      = rinc || winc;     
 assign mem_req_opcode   = winc ? 1'b1 : 1'b0;  
-assign mem_req_addr     = wptr;    
+assign mem_req_addr     = winc ? wptr : rptr;
 assign mem_req_data     = write_pld;    
 assign mem_req_bit_en   = {DATA_WIDTH{1'b1}};
 assign mem_req_sideband = read_sideband;

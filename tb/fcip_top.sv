@@ -1275,7 +1275,8 @@ fcip_mem_ctrl_wrap #(
     .SIDEBAND_WIDTH     (1),
     .DATA_WIDTH         (32),
     .ADDR_WIDTH         (10),
-    .MCP_CYCLE          (1)
+    .MCP_CYCLE          (1),
+    .ECC_EN             (0)
 ) u_fcip_mem_ctrl_wrap (
     .clk            (clk),
     .rst_n          (rst_n),
@@ -1294,7 +1295,9 @@ fcip_mem_ctrl_wrap #(
     .spram_dout     (fcip_mem_ctrl_wrap_spram_dout),
     .spram_bit_en   (fcip_mem_ctrl_wrap_spram_bit_en),
     .spram_en       (fcip_mem_ctrl_wrap_spram_en),
-    .spram_wren     (fcip_mem_ctrl_wrap_spram_wren)
+    .spram_wren     (fcip_mem_ctrl_wrap_spram_wren),
+    .ecc_sb_err     (),
+    .ecc_db_err     ()
 );
 
 // fcip_mem_fake_find_new_bit instance
@@ -1385,7 +1388,9 @@ fcip_mem_fake_2p_mem #(
     .spram_bit_en       (fcip_mem_fake_2p_mem_spram_bit_en),
     .stall              (fcip_mem_fake_2p_mem_stall),
     .clear              (fcip_mem_fake_2p_mem_clear),
-    .idle               (fcip_mem_fake_2p_mem_idle)
+    .idle               (fcip_mem_fake_2p_mem_idle),
+    .mem_ecc_sb_err     (),
+    .mem_ecc_db_err     ()
 );
 
 // ============================================================
@@ -1416,13 +1421,14 @@ fcip_sfifo_spram_ctrl #(
     .FIFO_DEPTH_PER_GROUP  (64),
     .SRAM_GROUP_NUM        (2),
     .DATA_WIDTH            (64),
-    .ALMOST_FULL_THRESHOLD (2),
-    .ALMOST_EMPTY_THRESHOLD(2),
     .FORWARD_EN            (1),
     .SIDEBAND_WIDTH        (1)
 ) u_fcip_sfifo_spram_ctrl (
     .clk                    (clk),
     .rst_n                  (rst_n),
+    .almost_full_threshold_val (7'd60),
+    .almost_empty_threshold_val(7'd2),
+
     .write_vld              (fcip_sfifo_spram_ctrl_write_vld),
     .write_pld              (fcip_sfifo_spram_ctrl_write_pld),
     .write_rdy              (fcip_sfifo_spram_ctrl_write_rdy),
@@ -1502,8 +1508,8 @@ fcip_sync_fifo_spram #(
     .FIFO_DEPTH_PER_GROUP  (64),
     .SRAM_GROUP_NUM        (2),
     .DATA_WIDTH            (16),
-    .ALMOST_FULL_THRESHOLD (2),
-    .ALMOST_EMPTY_THRESHOLD(2),
+    //.ALMOST_FULL_THRESHOLD (2),
+    //.ALMOST_EMPTY_THRESHOLD(2),
     .FORWARD_EN            (1),
     .ROB_DEPTH             (16),
     .SRAM_ACCESS_LATENCY   (1),
@@ -1513,6 +1519,9 @@ fcip_sync_fifo_spram #(
 ) u_fcip_sync_fifo_spram (
     .clk            (clk),
     .rst_n          (rst_n),
+    .almost_full_threshold_val (7'd60),
+    .almost_empty_threshold_val(7'd2),
+
     .stall          (fcip_sync_fifo_spram_stall),
     .clear          (fcip_sync_fifo_spram_clear),
     .idle           (fcip_sync_fifo_spram_idle),

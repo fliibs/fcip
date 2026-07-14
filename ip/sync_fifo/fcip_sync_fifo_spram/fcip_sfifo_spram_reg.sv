@@ -1,13 +1,16 @@
-module fcip_sync_fifo_reg #(
+module fcip_sfifo_spram_reg #(
     parameter  integer unsigned FIFO_DEPTH = 16,
     parameter  integer unsigned FIFO_WIDTH = 16,
-    parameter  integer unsigned ALMOST_FULL_THRESHOLD  = 12,
-    parameter  integer unsigned ALMOST_EMPTY_THRESHOLD = 4 ,
+    //parameter  integer unsigned ALMOST_FULL_THRESHOLD  = 12,
+    //parameter  integer unsigned ALMOST_EMPTY_THRESHOLD = 4 ,
     parameter  integer unsigned FORWARD_EN = 1 ,
     localparam int unsigned CNT_WIDTH = $clog2(FIFO_DEPTH)
 )(
     input  logic                    clk,
     input  logic                    rst_n,
+
+    input   logic [CNT_WIDTH-1:0]   almost_full_threshold_val,
+    input   logic [CNT_WIDTH-1:0]   almost_empty_threshold_val,
 
     //power down
     input  logic                    stall,
@@ -30,11 +33,6 @@ module fcip_sync_fifo_reg #(
     output logic                    full
 );
 
-localparam logic [CNT_WIDTH:0] FIFO_DEPTH_COUNT  = (CNT_WIDTH+1)'(FIFO_DEPTH);
-localparam logic [CNT_WIDTH:0] ALMOST_FULL_COUNT = (CNT_WIDTH+1)'(ALMOST_FULL_THRESHOLD);
-localparam logic [CNT_WIDTH:0] ALMOST_EMPTY_COUNT = (CNT_WIDTH+1)'(ALMOST_EMPTY_THRESHOLD);
-localparam logic [CNT_WIDTH:0] COUNT_ONE = (CNT_WIDTH+1)'(1);
-
 logic [CNT_WIDTH-1:0]           wr_ptr;
 logic [CNT_WIDTH-1:0]           rd_ptr;
 logic [FIFO_WIDTH-1:0]          array_data[FIFO_DEPTH-1:0];
@@ -48,12 +46,12 @@ logic                           eff_winc;
 /*            read/write control          */
 /*========================================*/
 
-generate 
+generate
     if(FORWARD_EN) begin
 
         logic forward_enable;
 
-        assign forward_enable   = empty && read_resp_rdy && ~stall;
+        assign forward_enable   = empty && read_resp_rdy;
         assign read_resp_pld    = forward_enable ? write_req_pld : array_data[rd_ptr];
         assign read_resp_vld    = forward_enable ? write_req_vld : ~empty;
 
@@ -74,8 +72,9 @@ endgenerate
 
 assign idle = empty;
 
-assign eff_rinc = rinc;
-assign eff_winc = winc;
+// Effective read/write increment gated by stall
+assign eff_rinc = rinc ;
+assign eff_winc = winc ;
 
 /*========================================*/
 /*           read & write counter         */
@@ -87,7 +86,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
     else if(clear)
         rd_ptr <= 'b0;
     else if(eff_rinc)
-        rd_ptr <= (rd_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? '0 : rd_ptr + 1'b1;
+        rd_ptr <= (rd_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? 'b0 : (rd_ptr + 1'b1);
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
@@ -96,7 +95,7 @@ always_ff @( posedge clk or negedge rst_n ) begin
     else if(clear)
         wr_ptr <= 'b0;
     else if(eff_winc)
-        wr_ptr <= (wr_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? '0 : wr_ptr + 1'b1;
+        wr_ptr <= (wr_ptr == CNT_WIDTH'(FIFO_DEPTH-1)) ? 'b0 : (wr_ptr + 1'b1);
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
@@ -118,31 +117,31 @@ end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        almost_full <= 'b0;
-    else if(clear)
-        almost_full <= 'b0;
-    else if( (ptr_cnt == (ALMOST_FULL_COUNT-1'b1)) && eff_winc && ~eff_rinc)
-        almost_full <= 1'b1;
-    else if( (ptr_cnt == ALMOST_FULL_COUNT) && ~eff_winc && eff_rinc)
         almost_full <= 1'b0;
-    else if( ptr_cnt >= ALMOST_FULL_COUNT)
+    else if(clear)
+        almost_full <= 1'b0;
+    else if( (ptr_cnt == (almost_full_threshold_val-1)) && eff_winc && ~eff_rinc)
         almost_full <= 1'b1;
-    else 
+    else if( (ptr_cnt == almost_full_threshold_val) && ~eff_winc && eff_rinc)
+        almost_full <= 1'b0;
+    else if( ptr_cnt >= almost_full_threshold_val)
+        almost_full <= 1'b1;
+    else
         almost_full <= 1'b0;
 end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        almost_empty <= 'b0;
+        almost_empty <= 1'b0;
     else if(clear)
         almost_empty <= 1'b0;
-    else if( (ptr_cnt == (ALMOST_EMPTY_COUNT+1'b1)) && eff_rinc && ~eff_winc)
+    else if( (ptr_cnt == (almost_empty_threshold_val+1)) && eff_rinc && ~eff_winc)
         almost_empty <= 1'b1;
-    else if( (ptr_cnt == ALMOST_EMPTY_COUNT) && ~eff_rinc && eff_winc)
+    else if( (ptr_cnt == almost_empty_threshold_val) && ~eff_rinc && eff_winc)
         almost_empty <= 1'b0;
-    else if(ptr_cnt <= ALMOST_EMPTY_COUNT)
+    else if(ptr_cnt <= almost_empty_threshold_val)
         almost_empty <= 1'b1;
-    else 
+    else
         almost_empty <= 1'b0;
 end
 
@@ -152,14 +151,14 @@ end
 
 always_ff @( posedge clk or negedge rst_n ) begin
     if(~rst_n)
-        full <= 'b0;
+        full <= 1'b0;
     else if(clear)
         full <= 1'b0;
-    else if( (ptr_cnt == (FIFO_DEPTH_COUNT-1'b1)) && eff_winc && ~eff_rinc)
+    else if( (ptr_cnt == (FIFO_DEPTH-1)) && eff_winc && ~eff_rinc)
         full <= 1'b1;
-    else if( (ptr_cnt == FIFO_DEPTH_COUNT) && ~eff_winc && eff_rinc)
+    else if( (ptr_cnt == FIFO_DEPTH) && ~eff_winc && eff_rinc)
         full <= 1'b0;
-    else if( ptr_cnt <= (FIFO_DEPTH_COUNT-1'b1) )
+    else if( ptr_cnt <= (FIFO_DEPTH-1) )
         full <= 1'b0;
 end
 
@@ -168,11 +167,11 @@ always_ff @( posedge clk or negedge rst_n ) begin
         empty <= 'b1;
     else if(clear)
         empty <= 1'b1;
-    else if( (ptr_cnt == COUNT_ONE) && eff_rinc && ~eff_winc )
+    else if( (ptr_cnt == 1) && eff_rinc && ~eff_winc )
         empty <= 1'b1;
-    else if( (ptr_cnt == '0) && ~eff_rinc && eff_winc )
+    else if( (ptr_cnt == 0) && ~eff_rinc && eff_winc )
         empty <= 1'b0;
-    else if( ptr_cnt >= COUNT_ONE )
+    else if( ptr_cnt >= 1 )
         empty <= 1'b0;
 end
 

@@ -1,6 +1,6 @@
 module fcip_arb_vrp #(
     parameter MODE      = 3, // 0: Fix_Priority 1:Round_Robin 2:Age_Matrix 3: PLRU
-    parameter HSK_MODE  = 1, // 0: Pass 1: backward reg slice 
+    parameter HSK_MODE  = 1, // 0: Pass 1: backward reg slice 2:backward reg slice with grant 3: backward regslice for grant
     parameter WIDTH     = 4,
     parameter PRIORITY  = {WIDTH{1'b0}},
     parameter PLD_WIDTH = 32
@@ -48,7 +48,7 @@ generate
         assign m_rdy   = rdy_m_r | (~vld_m_r);
         assign v_grant_hsk = v_grant;
 
-        always @(posedge clk or negedge rst_n) begin 
+        always @(posedge clk or negedge rst_n) begin
             if(~rst_n)                              vld_m_r  <= 1'b0;
             else if (m_vld && ~vld_m_r && ~rdy_m)   vld_m_r  <= 1'b1;
             else if (rdy_m)                         vld_m_r  <= 1'b0;
@@ -58,19 +58,18 @@ generate
             if (m_vld && ~vld_m_r && ~rdy_m)        pld_m_r  <= m_pld;
         end 
 
-        always_ff @(posedge clk or negedge rst_n) begin : blockName
+        always @(posedge clk or negedge rst_n) begin
             if(~rst_n)                rdy_m_r  <= 1'b1;
             else                      rdy_m_r  <= rdy_m;
         end
-    
     end else if(HSK_MODE==2) begin 
         logic                   vld_m_r;
         logic [WIDTH-1:0]       pld_m_r;
 
-        assign vld_m   = m_vld;
         assign pld_m   = m_pld;
-        assign m_rdy   = rdy_m;
+        assign vld_m   = m_vld;
         assign v_grant_hsk = vld_m_r ? pld_m_r : v_grant;
+        assign m_rdy   = rdy_m;
 
         always @(posedge clk or negedge rst_n) begin 
             if(~rst_n)                              vld_m_r  <= 1'b0;
@@ -81,6 +80,7 @@ generate
         always @(posedge clk) begin 
             if (m_vld && ~vld_m_r && ~rdy_m)        pld_m_r  <= v_grant;
         end
+
     end else begin 
         assign vld_m   = m_vld;
         assign pld_m   = m_pld;
@@ -109,13 +109,18 @@ generate
             .v_priority (PRIORITY),
             .v_grant    (v_grant)
         );
-    end else if(MODE==1) begin 
+    end else if((MODE==1) || (MODE==4)) begin
+        logic               alloc_en;
+
+        assign alloc_en = m_vld&&m_rdy;
+
         fcip_grant_gen_rr #(
             .WIDTH(WIDTH)
         ) u_arb (
             .clk        (clk),
             .rst_n      (rst_n),
             .v_vld      (v_vld),
+            .alloc_en   (alloc_en),
             .v_grant    (v_grant)
         );
     end else if(MODE==2) begin 
@@ -123,7 +128,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = rdy_m&&vld_m; 
+        assign alloc_en = m_vld&&m_rdy;
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_age #(
@@ -148,7 +153,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = rdy_m&&vld_m; 
+        assign alloc_en = m_vld&&m_rdy;
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_plru_tree #(

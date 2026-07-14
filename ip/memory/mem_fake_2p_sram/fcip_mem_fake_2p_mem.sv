@@ -11,7 +11,10 @@ module fcip_mem_fake_2p_mem
     parameter integer unsigned RW_ARBITER_TYPE = 0,  //0 read first,1 write first
     parameter integer unsigned READ_FORWARD_EN = 1,
     parameter integer unsigned READ_BUFFER_SIZE = 4,
-    parameter integer unsigned WRITE_BIT_MASK_EN = 1
+    parameter integer unsigned WRITE_BIT_MASK_EN = 1,
+    parameter integer unsigned ECC_EN = 0,
+    localparam integer unsigned MEM_CODE_WIDTH = ($clog2(DATA_WIDTH)+DATA_WIDTH+1 <= 2**$clog2(DATA_WIDTH))? $clog2(DATA_WIDTH) : $clog2(DATA_WIDTH) + 1,
+    localparam integer unsigned MEM_TOTAL_WIDTH = DATA_WIDTH + MEM_CODE_WIDTH + 1
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -36,21 +39,26 @@ module fcip_mem_fake_2p_mem
     input  logic                        read_resp_rdy,
 
     //mem port
-    output logic [ADDR_WIDTH-1:0]       spram_addr,
-    input  logic [DATA_WIDTH-1:0]       spram_dout,
-    output logic [DATA_WIDTH-1:0]       spram_din,
-    output logic                        spram_en,
-    output logic                        spram_wren,
-    output logic [DATA_WIDTH -1 : 0]    spram_bit_en,
+    output logic [ADDR_WIDTH-1:0]                                      spram_addr,
+    input  logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_dout,
+    output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_din,
+    output logic                                                       spram_en,
+    output logic                                                       spram_wren,
+    output logic [(ECC_EN ? MEM_TOTAL_WIDTH-1 : DATA_WIDTH-1):0]       spram_bit_en,
 
     //lowpower
     input  logic                        stall,
     input  logic                        clear,
-    output logic                        idle
+    output logic                        idle,
+
+    //ECC check
+    output logic                        mem_ecc_sb_err,
+    output logic                        mem_ecc_db_err,
+    output logic                        mem_ecc_comp_err
 );
 
 localparam int unsigned FIFO_THRESHOLD  = READ_BUFFER_SIZE-1;
-localparam int unsigned MEM_LATENCY     = SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
+localparam int unsigned MEM_LATENCY     = ECC_EN ? SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE +2 : SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE;
 
 /*========================================*/
 /*               write buffer             */
@@ -102,6 +110,10 @@ logic                                   read_buffer_out_vld;
 logic [DATA_WIDTH+SIDEBAND_WIDTH-1:0]   read_buffer_out_pld;
 logic                                   read_buffer_out_rdy;
 
+logic                                   spram_ecc_sb_err;
+logic                                   spram_ecc_db_err;
+logic                                   spram_ecc_comp_err;
+
 generate 
     if(WRITE_BUFFER_SIZE == 0)begin
         
@@ -109,6 +121,9 @@ generate
         assign write_sram_data  = write_req_data;
         assign write_sram_addr  = write_req_addr;
         assign write_req_rdy    = write_sram_rdy;
+
+        assign write_sram_bit_en = write_req_bit_en;
+        assign write_buffer_empty = 1'b1;
 
     end else begin
         fcip_mem_fake_write_buffer #(
@@ -193,12 +208,20 @@ generate
         assign read_out_data        = mem_rsp_data;
         assign read_out_sideband    = mem_rsp_sideband;
 
+        assign mem_ecc_sb_err       = spram_ecc_sb_err;
+        assign mem_ecc_db_err       = spram_ecc_db_err;
+        assign mem_ecc_comp_err     = spram_ecc_comp_err;
+
     end else if(WRITE_BIT_MASK_EN == 0)begin
 
         assign read_out_vld         = mem_rsp_en;
         
         assign read_out_data        = read_cmp_hit_delay ? read_hit_data_delay : mem_rsp_data;
         assign read_out_sideband    = mem_rsp_sideband;
+
+        assign mem_ecc_sb_err       = read_cmp_hit_delay ? 1'b0 : spram_ecc_sb_err;
+        assign mem_ecc_db_err       = read_cmp_hit_delay ? 1'b0 : spram_ecc_db_err;
+        assign mem_ecc_comp_err     = read_cmp_hit_delay ? 1'b0 : spram_ecc_comp_err;
 
     end else begin
 
@@ -211,14 +234,15 @@ generate
         
         assign read_out_data        = read_cmp_hit_delay ? data_merge : mem_rsp_data;
         assign read_out_sideband    = mem_rsp_sideband;
+
+        //bit mask don't support ecc
+        assign mem_ecc_sb_err       = 1'b0;
+        assign mem_ecc_db_err       = 1'b0;
+        assign mem_ecc_comp_err     = 1'b0;
+
     end
 endgenerate
 
-/*========================================*/
-/*                ECC decode              */
-/*========================================*/
-
-//add future
 
 /*========================================*/
 /*              Memory Wrapper            */
@@ -231,7 +255,8 @@ fcip_mem_ctrl_wrap #(
         .SIDEBAND_WIDTH(SIDEBAND_WIDTH),
         .DATA_WIDTH(DATA_WIDTH),
         .ADDR_WIDTH(ADDR_WIDTH),
-        .MCP_CYCLE(MCP_CYCLE)
+        .MCP_CYCLE(MCP_CYCLE),
+        .ECC_EN(ECC_EN)
     )u_fifo_spram_mem_ctrl(
         .clk                 (clk             ),
         .rst_n               (rst_n           ),
@@ -252,7 +277,11 @@ fcip_mem_ctrl_wrap #(
         .spram_dout          (spram_dout      ),
         .spram_en            (spram_en        ),
         .spram_wren          (spram_wren      ),
-        .spram_bit_en        (spram_bit_en    )
+        .spram_bit_en        (spram_bit_en    ),
+
+        .ecc_sb_err          (spram_ecc_sb_err),
+        .ecc_db_err          (spram_ecc_db_err),
+        .ecc_comp_err        (spram_ecc_comp_err)
 );
 
 /*========================================*/

@@ -74,7 +74,7 @@ generate
         fcip_lead_one_msb #(
             .ENTRY_NUM      (WRITE_BUFFER_SIZE   )
         ) u_hazard_bit_backward_lead_one(
-            .v_entry_vld    (hazard_check_bit_forward[i]),
+            .v_entry_vld    (hazard_check_bit_backward[i]),
             .v_free_idx_oh  (hazard_check_bit_backward_oh[i]),
             .v_free_idx_bin (),
             .v_free_vld     (hazard_check_bit_backward_en[i] )

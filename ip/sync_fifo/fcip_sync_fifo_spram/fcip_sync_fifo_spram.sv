@@ -2,8 +2,8 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned FIFO_DEPTH_PER_GROUP = 64,
     parameter  integer unsigned SRAM_GROUP_NUM = 2,
     parameter  integer unsigned DATA_WIDTH = 16,
-    parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
-    parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
+    //parameter  integer unsigned ALMOST_FULL_THRESHOLD = 2,
+    //parameter  integer unsigned ALMOST_EMPTY_THRESHOLD= 2,
     parameter  integer unsigned FORWARD_EN = 1,
     parameter  integer unsigned ROB_DEPTH = 16, //ROB DEPTH should be larger than MEM DATA PIPE Latency
     //for memory crl wrapper
@@ -11,10 +11,15 @@ module fcip_sync_fifo_spram #(
     parameter  integer unsigned SRAM_REQ_PIPE_STAGE = 0,
     parameter  integer unsigned SRAM_RSP_PIPE_STAGE = 0,
     parameter  integer unsigned MCP_CYCLE = 1,
-    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP)
+    parameter  integer unsigned ECC_EN = 0,
+    localparam int unsigned ADDR_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP),
+    localparam int unsigned THRESHOLD_WIDTH = $clog2(FIFO_DEPTH_PER_GROUP*SRAM_GROUP_NUM)
 )(
     input  logic                        clk,
     input  logic                        rst_n,
+
+    input  logic [THRESHOLD_WIDTH-1:0]  almost_full_threshold_val,
+    input  logic [THRESHOLD_WIDTH-1:0]  almost_empty_threshold_val,
 
     //power down
     input  logic                        stall,
@@ -50,7 +55,6 @@ localparam int unsigned SRAM_DELAY_TOTAL            = SRAM_ACCESS_LATENCY + SRAM
 localparam int unsigned ROB_ALMOST_FULL_THRESHOLD   = ROB_DEPTH - SRAM_DELAY_TOTAL;
 localparam int unsigned MEM_SIDEBAND_WIDTH          = ROB_PTR_WIDTH;
 
-logic                           sram_empty;
 logic                           rob_write_vld;
 logic [DATA_WIDTH-1:0]          rob_write_pld;
 logic                           rob_write_rdy;
@@ -61,9 +65,6 @@ logic                           sram_req_vld;
 logic [DATA_WIDTH-1:0]          sram_req_pld;
 logic                           sram_req_rdy;
 logic [ROB_PTR_WIDTH-1:0]       sram_req_id;
-logic                           read_vld;
-logic [DATA_WIDTH-1:0]          read_pld;
-logic                           read_rdy;
 logic                           rob_almost_empty;
 logic                           rob_almost_full;
 logic                           sram_pre_winc;
@@ -120,13 +121,17 @@ fcip_sfifo_spram_ctrl #(
     .FIFO_DEPTH_PER_GROUP(FIFO_DEPTH_PER_GROUP),
     .SRAM_GROUP_NUM (SRAM_GROUP_NUM),
     .DATA_WIDTH(DATA_WIDTH),
-    .ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
-    .ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
+    //.ALMOST_FULL_THRESHOLD (ALMOST_FULL_THRESHOLD),
+    //.ALMOST_EMPTY_THRESHOLD(ALMOST_EMPTY_THRESHOLD),
     .FORWARD_EN(0),
     .SIDEBAND_WIDTH(MEM_SIDEBAND_WIDTH)
 )u_sfifo_spram_ctrl(
     .clk                    (clk             ),
     .rst_n                  (rst_n           ),
+
+    .almost_full_threshold_val (almost_full_threshold_val),
+    .almost_empty_threshold_val(almost_empty_threshold_val),
+
     .write_vld              (ram_write_vld   ),
     .write_pld              (ram_write_pld   ),
     .write_rdy              (ram_write_rdy   ),
@@ -177,7 +182,8 @@ generate
             .SIDEBAND_WIDTH(MEM_SIDEBAND_WIDTH),
             .DATA_WIDTH(DATA_WIDTH),
             .ADDR_WIDTH(ADDR_WIDTH),
-            .MCP_CYCLE(MCP_CYCLE)
+            .MCP_CYCLE(MCP_CYCLE),
+            .ECC_EN(ECC_EN)
         )u_fifo_spram_mem_ctrl(
             .clk                 (clk             ),
             .rst_n               (rst_n           ),
@@ -198,7 +204,11 @@ generate
             .spram_dout          (spram_dout[i]),
             .spram_en            (spram_en[i]  ),
             .spram_wren          (spram_wren[i]),
-            .spram_bit_en        (spram_bit_en[i])
+            .spram_bit_en        (spram_bit_en[i]),
+
+            .ecc_sb_err          (),
+            .ecc_db_err          (),
+            .ecc_comp_err        ()
         );
 
     end
