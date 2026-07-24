@@ -84,7 +84,7 @@ generate
     end
 endgenerate
 
-assign write_rdy          = ~spram_ctrl_full;
+assign write_rdy          = ~spram_ctrl_full && (|sram_write_rdy);
 assign ptr_ctrl_write_pld = write_pld;
 
 fcip_grant_gen_rr #(
