@@ -61,8 +61,11 @@ logic [FIFO_DEPTH-1:0]  wptr_async_nxt_size_only;
 logic [FIFO_DEPTH-1:0]  rptr_sync_marker;
 logic [FIFO_DEPTH-1:0]  rptr_async_marker;
 logic [FIFO_DEPTH-1:0]  wptr_async_marker_SIZE_ONLY;
+logic [FIFO_DEPTH-1:0]  rptr_sync_marker_shift;
 
 logic [(DOUBLE_DATA_WIRE? (DATA_WIDTH*2+1) : DATA_WIDTH):0]    pld_sync_marker;
+logic [DATA_WIDTH:0]    pld_sync_marker_0;
+logic [DATA_WIDTH:0]    pld_sync_marker_1;
 
 /*========================================*/
 /*               CDC Clock Marker         */
@@ -343,13 +346,13 @@ endgenerate
 
     generate
         for(k=0;k<(DATA_WIDTH+1);k=k+1) begin: PLD_WIDTH_1
-            assign pld_mux_rev_select_1[k] = pld_mux_rev_0[k] & select_onehot_0;
+            assign pld_mux_rev_select_1[k] = pld_mux_rev_1[k] & select_onehot_1;
         end
     endgenerate
 
     generate
         for(l=0;l<(DATA_WIDTH+1);l=l+1) begin: SEL_PLD_DATA_1
-            assign pld_mux_select_1[l] = |pld_mux_rev_select_0[l];
+            assign pld_mux_select_1[l] = |pld_mux_rev_select_1[l];
         end 
     endgenerate
 
