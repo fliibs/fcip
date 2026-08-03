@@ -33,6 +33,8 @@ ecc_enc_inject_sim #(
     .INVALID_START (0),
     .INVALID_END   (0)
 ) u_ecc_dec_inject_core (
+    .clk             (clk),
+    .rst_n           (rst_n),
     .enc_post_data   (encode_data),
     .ecc_inject_data (inj_enc_data)
 );
@@ -40,6 +42,8 @@ ecc_enc_inject_sim #(
 ecc_dec_inject_sim #(
     .INPUT_WIDTH (TOTAL_WIDTH)
 ) u_ecc_dec_inject (
+    .clk          (clk),
+    .rst_n        (rst_n),
     .encode_src   (inj_enc_data),
     .encode_tgt_1 (inj_enc_data0),
     .encode_tgt_2 (inj_enc_data1)

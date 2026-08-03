@@ -85,20 +85,28 @@ generate
     end
 endgenerate
 
-assign write_rdy          = ~spram_ctrl_full;
+assign write_rdy          = ~spram_ctrl_full && (|sram_write_rdy);
 assign ptr_ctrl_write_pld = write_pld;
 assign spram_ctrl_write_any_handshake = |spram_ctrl_write_handshake;
 
-fcip_grant_gen_rr #(
-    .WIDTH(SRAM_GROUP_NUM)
-) u_write_alloc(
-    .clk    (clk),
-    .rst_n  (rst_n),
-
-    .v_vld   (sram_write_rdy),
-    .alloc_en(spram_ctrl_write_any_handshake),
-    .v_grant (sram_write_alloc)
-);
+generate
+    if(SRAM_GROUP_NUM == 1) begin: GEN_SINGLE_BANK_WRITE_ALLOC
+        // A one-bank FIFO has no allocation choice. Avoid WIDTH=1 slices in
+        // fcip_grant_gen_rr and preserve the bank's read-first backpressure.
+        assign sram_write_alloc = sram_write_rdy;
+    end
+    else begin: GEN_MULTI_BANK_WRITE_ALLOC
+        fcip_grant_gen_rr #(
+            .WIDTH(SRAM_GROUP_NUM)
+        ) u_write_alloc(
+            .clk      (clk                         ),
+            .rst_n    (rst_n                       ),
+            .v_vld    (sram_write_rdy              ),
+            .alloc_en (spram_ctrl_write_any_handshake),
+            .v_grant  (sram_write_alloc            )
+        );
+    end
+endgenerate
 
 /*========================================*/
 /*              sram ptr ctrl             */
