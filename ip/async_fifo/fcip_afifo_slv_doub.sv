@@ -95,8 +95,11 @@ assign bubble_req_pld   = {(DATA_WIDTH+1){1'b0}};
 generate
     
     if(AUTO_CLEAR_EN)begin:AUTO_CLEAR_EN_OPEN
+        logic s_rdy_ext;
+
         assign s_pld_ext = {s_pld,1'b1}; // bit[0] is 1(normal), is 0(bubble)
         assign s_vld_ext = s_vld && ~stall;
+        assign s_rdy     = s_rdy_ext && ~stall;
         
         fcip_fix_arb #(
             .PLD_TYPE(logic [DATA_WIDTH:0])
@@ -105,7 +108,7 @@ generate
             .rst_n          (rst_n),
         
             .s_vld_priority (s_vld_ext),
-            .s_rdy_priority (s_rdy),
+            .s_rdy_priority (s_rdy_ext),
             .s_pld_priority (s_pld_ext),
         
             .s_vld          (bubble_req_vld),    
@@ -124,7 +127,7 @@ generate
 
         assign s_gen_vld = s_vld_ext;
         assign s_gen_pld = s_pld_ext;
-        assign s_rdy     = s_gen_rdy;
+        assign s_rdy     = s_gen_rdy && ~stall;
 
     end
 

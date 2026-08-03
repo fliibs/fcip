@@ -62,6 +62,7 @@ logic                       rptr_switch;
 logic                       reg_slice_vld_r;
 logic [DATA_WIDTH:0]        reg_slice_pld_r;
 logic                       reg_slice_rdy_r;
+logic                       m_rdy_active;
 
 /*========================================*/
 /*               CDC Clock Marker         */
@@ -292,6 +293,7 @@ endgenerate
 
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
+assign m_rdy_active         = m_rdy && ~stall;
 
 always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
@@ -326,15 +328,15 @@ generate
         assign read_resp_mask = stall || bubble_en;
         assign m_vld  = reg_slice_vld_r && ~read_resp_mask;
         assign m_pld  = reg_slice_pld_r[DATA_WIDTH:1];
-        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy;
-        assign reg_slice_rdy_r = m_rdy || bubble_en;
+        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy_active;
+        assign reg_slice_rdy_r = m_rdy_active || bubble_en;
 
     end else begin
 
         assign m_vld = reg_slice_vld_r && ~stall;
         assign m_pld = reg_slice_pld_r[DATA_WIDTH:1];
-        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy;
-        assign reg_slice_rdy_r = m_rdy;
+        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy_active;
+        assign reg_slice_rdy_r = m_rdy_active;
 
     end
 endgenerate
