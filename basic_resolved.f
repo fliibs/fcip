@@ -11,7 +11,7 @@
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_onehot2bin.sv
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_real_mux_onehot.sv
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_rob_id_dec.sv
+/data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_rob_id_dec_exact.sv
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_rob_prealloc.sv
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_onehot_demux.sv
 /data/luhongzhao/byd/a5_lwnoc/sync/lwnoc_network_verif/subs/fcip/ip/basic/fcip_onehot_mux_pld.sv
-

@@ -11,7 +11,7 @@ $FCIP_DIR/ip/basic/fcip_list_lead_zero.sv
 $FCIP_DIR/ip/basic/fcip_onehot2bin.sv
 $FCIP_DIR/ip/basic/fcip_real_mux_onehot.sv
 $FCIP_DIR/ip/basic/fcip_rob_id_dec.sv
+$FCIP_DIR/ip/basic/fcip_rob_id_dec_exact.sv
 $FCIP_DIR/ip/basic/fcip_rob_prealloc.sv
 $FCIP_DIR/ip/basic/fcip_onehot_demux.sv
 $FCIP_DIR/ip/basic/fcip_onehot_mux_pld.sv
-
