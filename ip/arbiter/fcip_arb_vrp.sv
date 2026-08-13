@@ -48,7 +48,7 @@ generate
         assign m_rdy   = rdy_m_r | (~vld_m_r);
         assign v_grant_hsk = v_grant;
 
-        always @(posedge clk or negedge rst_n) begin 
+        always @(posedge clk or negedge rst_n) begin
             if(~rst_n)                              vld_m_r  <= 1'b0;
             else if (m_vld && ~vld_m_r && ~rdy_m)   vld_m_r  <= 1'b1;
             else if (rdy_m)                         vld_m_r  <= 1'b0;
@@ -58,7 +58,7 @@ generate
             if (m_vld && ~vld_m_r && ~rdy_m)        pld_m_r  <= m_pld;
         end 
 
-        always @(posedge clk or negedge rst_n) begin 
+        always @(posedge clk or negedge rst_n) begin
             if(~rst_n)                rdy_m_r  <= 1'b1;
             else                      rdy_m_r  <= rdy_m;
         end
@@ -109,10 +109,10 @@ generate
             .v_priority (PRIORITY),
             .v_grant    (v_grant)
         );
-    end else if((MODE==1) || (MODE==4)) begin 
+    end else if((MODE==1) || (MODE==4)) begin
         logic               alloc_en;
 
-        assign alloc_en = m_vld&&m_rdy; 
+        assign alloc_en = m_vld&&m_rdy;
 
         fcip_grant_gen_rr #(
             .WIDTH(WIDTH)
@@ -128,7 +128,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = m_vld&&m_rdy; 
+        assign alloc_en = m_vld&&m_rdy;
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_age #(
@@ -153,7 +153,7 @@ generate
         logic [WIDTH-1:0]   v_alloc;
         logic [WIDTH-1:0]   vv_matrix [WIDTH-1:0];
 
-        assign alloc_en = m_vld&&m_rdy; 
+        assign alloc_en = m_vld&&m_rdy;
         assign v_alloc  = v_grant;
 
         fcip_mtx_gen_plru_tree #(

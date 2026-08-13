@@ -58,4 +58,3 @@ $COMMON_IP_PATH/rtl/fifo/async_fifo/fcip_req_rsp_afifo_slv.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_find_new_bit.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_write_buffer.sv
 $COMMON_IP_PATH/rtl/memory/mem_fake_2p_sram/mem_fake_2p_mem.sv
-

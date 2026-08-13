@@ -53,7 +53,6 @@ logic                   s_vld_ext;
 logic [DATA_WIDTH:0]    s_pld_ext;
 logic                   bubble_req_vld;
 logic [DATA_WIDTH:0]    bubble_req_pld;
-logic                   bubble_gen_rdy;
 
 logic [FIFO_DEPTH-1:0]  wptr_async_nxt_size_only;
 logic [FIFO_DEPTH-1:0]  rptr_sync_marker;
@@ -78,8 +77,7 @@ fcip_clk_marker #(
 /*               Bubble Gen               */
 /*========================================*/
 
-assign bubble_gen_rdy   = ~full_zero;
-assign bubble_req_vld   = bubble_gen_rdy && (AUTO_CLEAR_EN==1);
+assign bubble_req_vld   = (~wr_ptr_zero) && (AUTO_CLEAR_EN==1);
 assign bubble_req_pld   = {(DATA_WIDTH+1){1'b0}};
 
 /*========================================*/
@@ -89,8 +87,11 @@ assign bubble_req_pld   = {(DATA_WIDTH+1){1'b0}};
 generate
     
     if(AUTO_CLEAR_EN)begin:AUTO_CLEAR_EN_OPEN
+        logic s_rdy_ext;
+
         assign s_pld_ext = {s_pld,1'b1}; // bit[0] is 1(normal), is 0(bubble)
         assign s_vld_ext = s_vld && ~stall;
+        assign s_rdy     = s_rdy_ext && ~stall;
         
         fcip_fix_arb #(
             .PLD_TYPE(logic [DATA_WIDTH:0])
@@ -99,7 +100,7 @@ generate
             .rst_n          (rst_n),
         
             .s_vld_priority (s_vld_ext),
-            .s_rdy_priority (s_rdy),
+            .s_rdy_priority (s_rdy_ext),
             .s_pld_priority (s_pld_ext),
         
             .s_vld          (bubble_req_vld),    
@@ -118,7 +119,7 @@ generate
 
         assign s_gen_vld = s_vld_ext;
         assign s_gen_pld = s_pld_ext;
-        assign s_rdy     = s_gen_rdy;
+        assign s_rdy     = s_gen_rdy && ~stall;
 
     end
 
@@ -247,7 +248,7 @@ generate
         // overestimated — safe for almost_full detection.
         // ---------------------------------------------------------------
 
-        localparam int unsigned POS_WIDTH  = PTR_WIDTH + 2;
+        localparam int unsigned POS_WIDTH  = PTR_WIDTH + 1;
         localparam int unsigned FILL_WIDTH = PTR_WIDTH + 1;
         localparam int unsigned CYCLE_LEN  = 2 * FIFO_DEPTH;
 
@@ -284,14 +285,7 @@ generate
                             (POS_WIDTH'(CYCLE_LEN) + wr_pos - rd_pos);
         assign fill_level = fill_raw[FILL_WIDTH-1:0];
 
-        always_ff @( posedge clk_marker or negedge rst_n ) begin
-            if(~rst_n)
-                almost_full <= 1'b0;
-            else if(clear)
-                almost_full <= 1'b0;
-            else
-                almost_full <= (fill_level >= FILL_WIDTH'(ALMOST_FULL_THRESHOLD));
-        end
+        assign almost_full = (fill_level >= FILL_WIDTH'(ALMOST_FULL_THRESHOLD)) ? 1'b1 : 1'b0;
     end else begin
         assign almost_full  = 1'b0;
     end

@@ -221,7 +221,7 @@ generate
 
         for(genvar j=0; j<WRITE_BUFFER_SIZE; j++ )begin
             assign cmp_hit_onehot[j]    = read_cmp_vld_1d && (read_cmp_addr_1d == write_array_data[j].write_addr) && write_array_vld[j];
-            assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr_true-1))); 
+            assign mask_en[j]           = (j<=(WRITE_BUFFER_SIZE'(wr_ptr_true-1)));
         end 
 
         for(genvar i=0;i<DATA_WIDTH;i++)begin:SEL_READ_HIT_BIT

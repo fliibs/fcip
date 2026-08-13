@@ -58,6 +58,11 @@ logic [FIFO_DEPTH-1:0]      wptr_async_marker;
 
 logic [DATA_WIDTH:0]        pld_sync_marker_0;
 logic [DATA_WIDTH:0]        pld_sync_marker_1;
+logic                       rptr_switch;
+logic                       reg_slice_vld_r;
+logic [DATA_WIDTH:0]        reg_slice_pld_r;
+logic                       reg_slice_rdy_r;
+logic                       m_rdy_active;
 
 /*========================================*/
 /*               CDC Clock Marker         */
@@ -76,7 +81,7 @@ fcip_clk_marker #(
 /*               read stall               */
 /*========================================*/
 
-assign idle = empty;
+assign idle = empty && ~reg_slice_vld_r;
 
 /*========================================*/
 /*             Gen full zero              */
@@ -84,7 +89,7 @@ assign idle = empty;
 
 assign wr_async_ptr_zero = ( (|rq2_wptr_sync1)==0 ) || ( (&rq2_wptr_sync1) == 1);
 assign rd_ptr_zero       = rptr_sync_inner_SIZE_ONLY == {{(FIFO_DEPTH-1){1'b0}},1'b1};
-assign full_zero         = wr_async_ptr_zero && rd_ptr_zero;
+assign full_zero         = wr_async_ptr_zero && rd_ptr_zero && ~reg_slice_vld_r;
 
 /*========================================*/
 /*              read ptr gen              */
@@ -153,10 +158,10 @@ end
 generate 
     if(DOUBLE_DATA_WIRE == 1 ) begin: DOUBLE_DATA_WIRE_LOGIC
 
-        logic rptr_switch;
-
         always_ff @( posedge clk_marker or negedge rst_n ) begin
             if(~rst_n)
+                rptr_switch <= 1'b0;
+            else if(clear)
                 rptr_switch <= 1'b0;
             else if(rinc)
                 rptr_switch <= ~rptr_switch;
@@ -286,27 +291,25 @@ endgenerate
 /*         read response reg slice        */
 /*========================================*/
 
-logic                   reg_slice_vld_r;
-logic [DATA_WIDTH:0]    reg_slice_pld_r;
-logic                   reg_slice_gen_rdy;
-
 assign read_out_vld         = rinc;
 assign read_out_data        = pld_sync_marker;
-
-assign reg_slice_gen_rdy    = m_rdy || (AUTO_CLEAR_EN && reg_slice_vld_r && ~reg_slice_pld_r[0]);
-assign read_out_rdy         = ~reg_slice_vld_r || reg_slice_gen_rdy;
+assign m_rdy_active         = m_rdy && ~stall;
 
 always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
         reg_slice_vld_r <= 1'b0;
+    else if(clear)
+        reg_slice_vld_r <= 1'b0;
     else if(read_out_vld && read_out_rdy)
         reg_slice_vld_r <= 1'b1;
-    else if(reg_slice_gen_rdy)
+    else if(reg_slice_rdy_r)
         reg_slice_vld_r <= 1'b0;
 end
 
 always_ff @( posedge clk_marker or negedge rst_n ) begin
     if(~rst_n)
+        reg_slice_pld_r <= 'b0;
+    else if(clear)
         reg_slice_pld_r <= 'b0;
     else if(read_out_vld && read_out_rdy)
         reg_slice_pld_r <= read_out_data;
@@ -325,11 +328,15 @@ generate
         assign read_resp_mask = stall || bubble_en;
         assign m_vld  = reg_slice_vld_r && ~read_resp_mask;
         assign m_pld  = reg_slice_pld_r[DATA_WIDTH:1];
+        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy_active;
+        assign reg_slice_rdy_r = m_rdy_active || bubble_en;
 
     end else begin
 
-        assign m_vld = reg_slice_vld_r;
+        assign m_vld = reg_slice_vld_r && ~stall;
         assign m_pld = reg_slice_pld_r[DATA_WIDTH:1];
+        assign read_out_rdy    = ~reg_slice_vld_r || m_rdy_active;
+        assign reg_slice_rdy_r = m_rdy_active;
 
     end
 endgenerate

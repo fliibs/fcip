@@ -47,7 +47,7 @@ localparam integer unsigned DATA_PIPE_LATENCY = ECC_EN ? SRAM_ACCESS_LATENCY + S
                                                             : SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE +SRAM_RSP_PIPE_STAGE;
 localparam integer unsigned MCP_LATENCY_WIDTH = $clog2(MCP_CYCLE);
 
-generate 
+generate
     if(MCP_CYCLE==1)begin
         
         assign mem_req_rdy = 1'b1;
@@ -76,7 +76,7 @@ endgenerate
 
 //sram_marker
 
-generate 
+generate
     if(ECC_EN==1)begin
 
         logic [MEM_TOTAL_WIDTH-1 : 0] mem_req_data_ecc;
@@ -127,7 +127,7 @@ generate
 endgenerate
 
 
-generate 
+generate
     if(ECC_EN==1)begin
 
         logic [DATA_WIDTH-1 : 0] spram_dout_decc;
