@@ -205,18 +205,15 @@ db_err = (~dec_parity_bit && (|check_bits_rst))
 encode_data
     |
     v
-[数据展开、syndrome 和 overall parity 计算]
+[一级入口寄存器: encode_data_r]
     |
     v
-[一级寄存器: enc_data_extend_r/check_bits_rst_r/dec_parity_bit_r]
-    |
-    v
-[错误判定、独热展开和数据纠正]
+[数据展开、syndrome 计算、错误判定、独热展开和数据纠正]
     |
     +----> data/sb_err/db_err
 ```
 
-该模块相对输入增加 1 个时钟周期延迟。模块没有 `vld` 信号，集成模块必须自行将数据有效信号延迟相同周期。
+该模块在 decoder 入口寄存完整的 `encode_data`，再将寄存结果送入组合 `fcip_ecc_dec`。模块相对输入增加 1 个时钟周期延迟，且没有 `vld` 信号，集成模块必须自行将数据有效信号延迟相同周期。
 
 `rst_n=0` 时，流水寄存器清零，`data`、`sb_err` 和 `db_err` 收敛为 0。
 
@@ -258,7 +255,7 @@ comp_err = (sb_err_1 ^ sb_err_2) || (db_err_1 ^ db_err_2);
 
 #### 5.5.2 时序行为
 
-模块内部例化两个 `fcip_ecc_dec_pipe`，两路路径具有相同的 1 个时钟周期延迟。`comp_err` 在流水 decoder 输出端组合生成，与 `data`、`sb_err` 和 `db_err` 周期对齐。
+模块内部例化两个 `fcip_ecc_dec_pipe`，注错后的两路 `encode_data` 分别在 decoder 入口寄存。两路路径具有相同的 1 个时钟周期延迟。`comp_err` 在流水 decoder 输出端组合生成，与 `data`、`sb_err` 和 `db_err` 周期对齐。
 
 `DFV_FUSA` 打开时，`clk` 和 `rst_n` 同时连接到 `ecc_enc_inject_sim` 和 `ecc_dec_inject_sim`，支持基于计数器的遍历注错。
 
@@ -376,7 +373,7 @@ SRAM_ACCESS_LATENCY + SRAM_REQ_PIPE_STAGE + SRAM_RSP_PIPE_STAGE + 2
 
 - `DATA_WIDTH` 增大时，encoder 的 check bit 异或树和 decoder 的 syndrome 计算逻辑同步增大。
 - 组合 decoder 的关键路径包含 syndrome 计算、独热展开和数据纠正。
-- pipe decoder 只在 syndrome 计算之后插入一级寄存器，寄存器后的独热展开和纠错仍为组合逻辑。
+- pipe decoder 在 `encode_data` 入口插入一级寄存器，完整的 syndrome 计算、独热展开和数据纠正逻辑位于该寄存器之后。
 - pipe 模块没有 `vld/rdy` 接口，控制信号延迟必须由集成模块实现。
 - 所有参与同一事务的 `data`、`sb_err`、`db_err` 和 `comp_err` 必须保持周期对齐。
 
@@ -417,7 +414,8 @@ fcip_ecc_dec
 └── fcip_bin2onehot
 
 fcip_ecc_dec_pipe
-└── fcip_bin2onehot
+└── fcip_ecc_dec
+    └── fcip_bin2onehot
 
 fcip_ecc_dec_dcls
 ├── fcip_ecc_dec ×2
